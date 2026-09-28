@@ -36,3 +36,20 @@ returns retrieval-only results (`X-LLM-Used: false`, no reasons).
 
 Keys are read from `.env` or environment variables. `python -m pytest backend/tests` runs with a stub LLM.
 **Status:** tested against a stub only; not yet run against live Gemini/Groq.
+
+## Phase 3: Tender Check
+`POST /analyze-tender` (PDF, max 20 MB): PyMuPDF text -> line items (numbered lines, BOQ table rows,
+bullets; LLM-assisted split only if heuristics find <2 items; first 40 items analysed) ->
+`/recommend` logic per item -> Tender Linter:
+
+| Flag | Severity | Rule |
+|---|---|---|
+| superseded | red | cited IS is the older side of a `supersedes` edge (edges arrive in Phase 4) |
+| no_certification | red | `certification.csv` (dated, active rows only) requires a mark but the item has no certification wording |
+| not_in_catalogue | amber | cited IS not in our (older) catalogue |
+| older_edition | amber | cited year < catalogue's latest year |
+| brand_name | amber | pattern-based (®/™, "Make:", "M/s X") and no "or equivalent" |
+
+The UI exports a printable audit report (browser "Save as PDF"). `docs/sample_tender.pdf` is a
+synthetic demo input. Limitations: scanned/image-only PDFs need OCR (not included); all-caps text
+such as "PRICE IS 100" can look like a citation and will be flagged "not in catalogue".

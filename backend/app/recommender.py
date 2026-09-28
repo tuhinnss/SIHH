@@ -61,11 +61,12 @@ def select_schema(candidate_numbers: list[str]) -> dict:
 
 
 class Recommender:
-    def __init__(self, retriever, llm: LLMClient | None, catalogue: dict[str, dict]) -> None:
+    def __init__(self, retriever, llm: LLMClient | None, catalogue: dict[str, dict], cert=None) -> None:
         """catalogue: display is_number -> latest-edition row (the validation table)."""
         self.retriever = retriever
         self.llm = llm
         self.catalogue = catalogue
+        self.cert = cert
 
     def _expand(self, text: str) -> tuple[str, list[str]]:
         if not self.llm or not self.llm.providers:
@@ -119,7 +120,8 @@ class Recommender:
             "is_number": row["is_number"], "title": row["title"], "year": row["year"],
             "relevance": relevance, "reason": reason,
             "confidence": conf if conf is not None else round(h["score"], 4),
-            "supersedes_info": None, "allied": [], "certification": None,
+            "supersedes_info": None, "allied": [],
+            "certification": self.cert.for_is(row["is_number"]) if self.cert else None,
             "source_url": row["source_url"],
             "clause": tender_clause(row["is_number"], row["year"], row["title"]),
         }
