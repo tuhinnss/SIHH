@@ -4,6 +4,7 @@ One retrieval document per standard key: the latest edition, preferring the plai
 English copy over Hindi/bilingual/tentative/supplement copies. Older editions stay in
 SQLite (used later by the version checker / Tender Linter).
 """
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -56,23 +57,34 @@ def main() -> None:
     bm.index(tok)
     bm.save(str(INDEX_DIR / "bm25"))
 
-    emb_path = INDEX_DIR / "emb.npy"
-    if emb_path.exists() and json.loads((INDEX_DIR / "meta.json").read_text()).get("model") == EMBED_MODEL:
-        print("embeddings cached, skipping")
-        return
-    model = SentenceTransformer(EMBED_MODEL, device="cpu")
-    model.max_seq_length = 128
+    emb_path, meta_path = INDEX_DIR / "emb.npy", INDEX_DIR / "meta.json"
+    hashes = [hashlib.md5(t.encode()).hexdigest() for t in texts]
+    old_vecs, old_by_hash = None, {}
+    if emb_path.exists() and meta_path.exists():
+        meta = json.loads(meta_path.read_text())
+        if meta.get("model") == EMBED_MODEL and meta.get("hashes"):
+            old_vecs = np.load(emb_path)
+            old_by_hash = {h: i for i, h in enumerate(meta["hashes"])}
+    model = None
+    dim = old_vecs.shape[1] if old_vecs is not None else None
+    todo = [i for i, h in enumerate(hashes) if h not in old_by_hash]
+    print(f"{len(texts) - len(todo)} embeddings reused, {len(todo)} to compute")
+    if todo:
+        model = SentenceTransformer(EMBED_MODEL, device="cpu")
+        model.max_seq_length = 128
+        dim = model.get_sentence_embedding_dimension()
+    out = np.zeros((len(texts), dim or 1), dtype="float32")
+    for i, h in enumerate(hashes):
+        if h in old_by_hash:
+            out[i] = old_vecs[old_by_hash[h]]
     prefix = passage_prefix(EMBED_MODEL)
-    # sort by length so batches are dense; restore order afterwards
-    order = np.argsort([len(t) for t in texts])
-    out = np.zeros((len(texts), model.get_sentence_embedding_dimension()), dtype="float32")
+    todo.sort(key=lambda j: len(texts[j]))  # length-sorted batches; restored by index
     bs = 64
-    for i in tqdm(range(0, len(texts), bs), desc="embedding"):
-        idx = order[i:i + bs]
-        out[idx] = model.encode([prefix + texts[j] for j in idx], normalize_embeddings=True,
-                                batch_size=bs)
+    for i in tqdm(range(0, len(todo), bs), desc="embedding", disable=not todo):
+        idx = todo[i:i + bs]
+        out[idx] = model.encode([prefix + texts[j] for j in idx], normalize_embeddings=True, batch_size=bs)
     np.save(emb_path, out)
-    (INDEX_DIR / "meta.json").write_text(json.dumps({"model": EMBED_MODEL, "n": len(texts)}))
+    meta_path.write_text(json.dumps({"model": EMBED_MODEL, "n": len(texts), "hashes": hashes}))
 
 
 if __name__ == "__main__":

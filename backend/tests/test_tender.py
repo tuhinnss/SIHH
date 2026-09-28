@@ -18,7 +18,8 @@ def cat():
         "IS-100": Entry("IS-100", "IS 100", "Widgets", 2008, [1985, 2008], "u"),
         "IS-200": Entry("IS-200", "IS 200", "Old gadgets", 1990, [1990], "u"),
         "IS-300": Entry("IS-300", "IS 300", "New gadgets", 2015, [2015], "u"),
-        "IS-IEC-500-P2": Entry("IS-IEC-500-P2", "IS/IEC 500 (Part 2)", "Switches", 2016, [2016], "u"),
+        "IS-IEC-60500-P2": Entry("IS-IEC-60500-P2", "IS/IEC 60500 (Part 2)", "Switches", 2016, [2016], "u"),
+        "IS-IEC-691": Entry("IS-IEC-691", "IS/IEC 691", "Thermal links", 1993, [1993], "u"),
     }
     return CatalogueIndex(es, {"IS-200": ["IS-300"]})
 
@@ -42,7 +43,7 @@ def test_linter_flags():
 def test_current_edition_is_clean_and_joint_prefix_resolves():
     L = Linter(cat(), cert())
     assert L.lint_item("Widgets to IS 100 : 2008")[0] == []
-    flags, cited = L.lint_item("Switches to IS 500 (Part 2) : 2016")  # cited without IEC
+    flags, cited = L.lint_item("Switches to IS 60500 (Part 2) : 2016")  # long IEC-style number cited without IEC
     assert flags == [] and cited[0]["in_catalogue"]
 
 
@@ -118,3 +119,9 @@ def test_max_items_truncation():
     rec = Recommender(Retr(), LLMClient([]), {"IS 100": {"is_number": "IS 100", "title": "W", "year": 1, "source_url": "u"}})
     out = analyze_pdf(pdf, "t.pdf", rec, Linter(cat(), cert()), max_items=3)
     assert out["truncated"] and len(out["items"]) == 3 and out["total_items_found"] == 7
+
+
+def test_short_numbers_do_not_match_prefixed_standards():
+    L = Linter(cat(), cert())
+    flags, cited = L.lint_item("Cables to IS 691 : 1988")     # plain IS 691 is NOT IS/IEC 691
+    assert not cited[0]["in_catalogue"] and types(flags) == ["not_in_catalogue"]

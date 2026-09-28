@@ -41,3 +41,27 @@ def polite_get_json(url: str, params: dict | None = None, retries: int = 5) -> d
             time.sleep(delay)
             delay *= 2
     raise RuntimeError("unreachable")
+
+
+def polite_get_text(url: str, retries: int = 4, max_bytes: int = 8_000_000) -> str | None:
+    """GET text (follows redirects), >=1s between calls, backoff. NOT cached: raw standard
+    texts are extracted then discarded. Returns None on 404."""
+    global _last
+    delay = 2.0
+    for attempt in range(retries):
+        wait = 1.0 - (time.monotonic() - _last)
+        if wait > 0:
+            time.sleep(wait)
+        _last = time.monotonic()
+        try:
+            r = requests.get(url, timeout=120, headers={"User-Agent": "SpecSure-SIH26108-prototype"})
+            if r.status_code == 404:
+                return None
+            r.raise_for_status()
+            return r.content[:max_bytes].decode("utf-8", errors="replace")
+        except requests.RequestException:
+            if attempt == retries - 1:
+                raise
+            time.sleep(delay)
+            delay *= 2
+    return None

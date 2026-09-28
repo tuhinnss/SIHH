@@ -128,3 +128,84 @@ def test_llm_client_falls_through_providers():
 def test_clause_uses_only_given_fields():
     c = tender_clause("IS 4985", None, "PVC pipes -")
     assert "IS 4985" in c and "(PVC pipes)" in c and " : None" not in c
+
+
+def test_language_detection_and_hint():
+    from app.lang import detect_lang
+    assert detect_lang("पीने के पानी के लिए पीवीसी पाइप") == "hi"
+    assert detect_lang("pani ke liye pvc pipe") == "hinglish"
+    assert detect_lang("PVC pipes for drinking water supply") == "en"
+    assert detect_lang("LED street light 60W") == "en"
+    seen = {}
+
+    def spy(prompt, schema):
+        if "english_query" in schema["properties"]:
+            seen["prompt"] = prompt
+            return {"english_query": "pvc pipe for water", "search_terms": []}
+        return {"selected": []}
+    rec, _ = make(spy)
+    out = rec.recommend("pani ke liye pvc pipe")
+    assert out["lang"] == "hinglish" and "detected language: hinglish" in seen["prompt"]
+
+
+def test_rate_limited_provider_is_skipped_during_cooldown():
+    import requests
+    calls = {"a": 0, "b": 0}
+
+    class Resp:
+        status_code = 429
+
+    class A:
+        name = "a"
+
+        def generate_json(self, p, s):
+            calls["a"] += 1
+            e = requests.HTTPError("429")
+            e.response = Resp()
+            raise e
+
+    class B:
+        name = "b"
+
+        def generate_json(self, p, s):
+            calls["b"] += 1
+            return {"ok": 1}
+    c = LLMClient([A(), B()])
+    assert c.generate_json("p", {}) == {"ok": 1}
+    assert c.generate_json("p", {}) == {"ok": 1}
+    assert calls == {"a": 1, "b": 2}   # A not retried while cooling down
+
+
+def test_llm_sees_whole_pool_but_output_is_top_k():
+    seen = {}
+
+    class R(FakeRetriever):
+        def search(self, query, **kw):
+            seen["top_k"] = kw["top_k"]
+            return super().search(query, **kw)
+
+    def pick(prompt, schema):
+        if "english_query" in schema["properties"]:
+            return {"english_query": "x", "search_terms": []}
+        seen["enum"] = schema["properties"]["selected"]["items"]["properties"]["is_number"]["enum"]
+        return {"selected": []}
+    r = R()
+    Recommender(r, LLMClient([StubProvider(pick)]), {d["is_number"]: d for d in DOCS}).recommend("x", top_k=2)
+    assert seen["top_k"] == 50 and len(seen["enum"]) == 3
+    r2 = R()
+    out = Recommender(r2, LLMClient([]), {d["is_number"]: d for d in DOCS}).recommend("x", top_k=2)
+    assert seen["top_k"] == 2 and len(out["results"]) == 2       # retrieval-only shows top_k
+
+
+def test_cited_standards_join_candidates(tmp_path, monkeypatch):
+    from app.catalogue import CatalogueIndex, Entry
+    from app.graph import Graph
+
+    class R(FakeRetriever):
+        def search(self, query, **kw):
+            return [dict(DOCS[2])]      # retrieval misses IS 1786
+    cat = CatalogueIndex({"IS-1786": Entry("IS-1786", "IS 1786", "High strength deformed steel bars", 2008, [2008], "u")})
+    catalogue = {d["is_number"]: {**d, "key": "IS-1786" if d["is_number"] == "IS 1786" else "K"} for d in DOCS}
+    rec = Recommender(R(), LLMClient([]), catalogue, graph=Graph(cat, []))
+    out = rec.recommend("bars conforming to IS 1786 : 1985", top_k=5)
+    assert [r["is_number"] for r in out["results"]][0] == "IS 1786"

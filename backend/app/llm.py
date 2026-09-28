@@ -30,7 +30,7 @@ def _post_with_backoff(url: str, headers: dict, body: dict, tries: int = 3) -> d
     delay = 2.0
     for attempt in range(tries):
         r = requests.post(url, headers=headers, json=body, timeout=60)
-        if r.status_code in (429, 500, 502, 503) and attempt < tries - 1:
+        if r.status_code in (500, 502, 503) and attempt < tries - 1:
             time.sleep(delay)
             delay *= 2
             continue
@@ -86,9 +86,13 @@ class StubProvider:
         return self.responder(prompt, schema)
 
 
+COOLDOWN_S = 60.0  # skip a rate-limited (HTTP 429) provider for a while instead of retrying every call
+
+
 class LLMClient:
     def __init__(self, providers: list[Provider]) -> None:
         self.providers = providers
+        self._skip_until: dict[str, float] = {}
 
     @classmethod
     def from_env(cls) -> "LLMClient":
@@ -101,8 +105,14 @@ class LLMClient:
 
     def generate_json(self, prompt: str, schema: dict) -> dict:
         for p in self.providers:
+            if self._skip_until.get(p.name, 0) > time.monotonic():
+                continue
             try:
                 return p.generate_json(prompt, schema)
             except Exception as e:  # noqa: BLE001 - any provider failure -> try next
-                log.warning("LLM provider %s failed: %s", p.name, type(e).__name__)
+                resp = getattr(e, "response", None)
+                if resp is not None and resp.status_code == 429:
+                    self._skip_until[p.name] = time.monotonic() + COOLDOWN_S
+                log.warning("LLM provider %s failed: %s%s", p.name, type(e).__name__,
+                            f" (HTTP {resp.status_code})" if resp is not None else "")
         raise LLMUnavailable("no LLM provider succeeded")
