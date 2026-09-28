@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+sqlmodel
+requests
+tqdm
+bm25s
+sentence-transformers
+faiss-cpu
+numpy
+pymupdf
+python-multipart
+python-dotenv
+pytest
