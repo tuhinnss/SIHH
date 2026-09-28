@@ -1,11 +1,13 @@
 import sqlite3
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from app.config import DB_PATH
+from app.llm import LLMClient
+from app.recommender import Recommender
 from app.retrieval import Retriever
 
 state: dict = {}
@@ -13,12 +15,16 @@ state: dict = {}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    state["retriever"] = Retriever()
+    retriever = Retriever()
+    state["retriever"] = retriever
+    state["recommender"] = Recommender(
+        retriever, LLMClient.from_env(), {d["is_number"]: d for d in retriever.docs})
     yield
 
 
 app = FastAPI(title="SpecSure API", lifespan=lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"],
+                   expose_headers=["X-LLM-Used"])
 
 
 class RecommendReq(BaseModel):
@@ -34,14 +40,10 @@ def health():
 
 
 @app.post("/recommend")
-def recommend(req: RecommendReq):
-    hits = state["retriever"].search(req.text, top_k=req.top_k, rerank=req.rerank)
-    return [{
-        "is_number": h["is_number"], "title": h["title"], "year": h["year"],
-        "relevance": "primary", "reason": None, "confidence": round(h["score"], 4),
-        "supersedes_info": None, "allied": [], "certification": None,
-        "source_url": h["source_url"],
-    } for h in hits]
+def recommend(req: RecommendReq, response: Response):
+    out = state["recommender"].recommend(req.text, top_k=req.top_k, rerank=req.rerank)
+    response.headers["X-LLM-Used"] = str(out["llm_used"]).lower()
+    return out["results"]
 
 
 @app.get("/stats")
