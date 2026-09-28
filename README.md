@@ -25,3 +25,14 @@ python -m pytest backend/tests
 ## Known Phase 1 limitation
 Retrieval is vocabulary-bound: "TMT steel bars" does not surface IS 1786 (its title says
 "High strength deformed steel bars…"). LLM query expansion and reranking come in Phase 2.
+
+## Phase 2: LLM selection (Gemini -> Groq fallback)
+Flow: LLM expands/translates the query (search terms only, no IS numbers) -> hybrid retrieval
+over query + expansions -> LLM picks from the top-50 candidates through a JSON schema whose
+`is_number` is an **enum of those candidates** -> every pick is re-validated against the
+catalogue; anything else is dropped and logged to `data/invented_is_log.jsonl` -> the copy-ready
+clause is built from catalogue fields, never from LLM text. With no keys or on LLM failure the API
+returns retrieval-only results (`X-LLM-Used: false`, no reasons).
+
+Keys are read from `.env` or environment variables. `python -m pytest backend/tests` runs with a stub LLM.
+**Status:** tested against a stub only; not yet run against live Gemini/Groq.

@@ -12,6 +12,18 @@ export default function App() {
   const [results, setResults] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [llmUsed, setLlmUsed] = useState(null);
+  const [copied, setCopied] = useState(null);
+
+  async function copyClause(r) {
+    try {
+      await navigator.clipboard.writeText(r.clause);
+      setCopied(r.is_number);
+      setTimeout(() => setCopied(null), 1500);
+    } catch {
+      window.prompt("Copy the clause:", r.clause);
+    }
+  }
 
   async function search(q = text) {
     if (!q.trim()) return;
@@ -25,6 +37,7 @@ export default function App() {
         body: JSON.stringify({ text: q, top_k: 10 }),
       });
       if (!r.ok) throw new Error(`API ${r.status}`);
+      setLlmUsed(r.headers.get("X-LLM-Used") === "true");
       setResults(await r.json());
     } catch (e) {
       setError(e.message);
@@ -66,6 +79,12 @@ export default function App() {
 
         {error && <p className="mt-6 text-red-700">Could not reach the API ({error}).</p>}
 
+        {results && llmUsed === false && (
+          <p className="mt-6 text-sm bg-amber-50 border border-amber-300 rounded px-3 py-2">
+            AI ranking is unavailable, so these are plain keyword/semantic matches without reasons.
+          </p>
+        )}
+
         {results && (
           <ol className="mt-8 space-y-3">
             {results.map((r, i) => (
@@ -73,13 +92,23 @@ export default function App() {
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-xs text-slate-400 w-5">{i + 1}.</span>
                   <span className="bg-navy text-white text-sm font-semibold px-2 py-0.5 rounded">{r.is_number}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded border ${r.relevance === "primary" ? "border-navy text-navy" : "border-slate-300 text-slate-500"}`}>
+                    {r.relevance}
+                  </span>
                   <span className="text-sm text-slate-500">{r.year ?? "year unknown"}</span>
                   <span className="text-xs bg-accent/30 border border-accent rounded px-2 py-0.5" title="Edition per our archive snapshot">
                     as per catalogue — verify on BIS
                   </span>
                 </div>
                 <p className="mt-2 font-medium">{r.title}</p>
-                <a href={r.source_url} target="_blank" rel="noreferrer" className="text-sm text-navy underline">Source</a>
+                {r.reason && <p className="mt-1 text-sm text-slate-600">{r.reason}</p>}
+                <div className="mt-2 flex items-center gap-4 text-sm">
+                  <button onClick={() => copyClause(r)} className="border border-navy text-navy rounded px-2 py-0.5 hover:bg-navy hover:text-white">
+                    {copied === r.is_number ? "Copied ✓" : "Copy tender clause"}
+                  </button>
+                  <a href={r.source_url} target="_blank" rel="noreferrer" className="text-navy underline">Source</a>
+                  {llmUsed && <span className="text-slate-400">confidence {Math.round(r.confidence * 100)}%</span>}
+                </div>
               </li>
             ))}
           </ol>
