@@ -16,3 +16,14 @@ class StandardRow(SQLModel, table=True):
     source_url: str
     ia_date: str | None = None
     scope_snippet: str | None = None
+
+
+class EdgeRow(SQLModel, table=True):
+    """Relations between standards. edge_type: supersedes | normative_ref | test_method |
+    terminology | same_series. For `supersedes`, src is the NEWER standard, dst the older."""
+    __tablename__ = "edges"
+    id: int | None = Field(default=None, primary_key=True)
+    src_key: str = Field(index=True)
+    dst_key: str = Field(index=True)
+    edge_type: str = Field(index=True)
+    source: str | None = None

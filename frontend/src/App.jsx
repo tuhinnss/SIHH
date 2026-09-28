@@ -1,4 +1,5 @@
 import { useState } from "react";
+import TenderCheck from "./TenderCheck.jsx";
 
 const EXAMPLES = [
   "PVC pipes for drinking water supply",
@@ -8,6 +9,7 @@ const EXAMPLES = [
 ];
 
 export default function App() {
+  const [tab, setTab] = useState("search");
   const [text, setText] = useState("");
   const [results, setResults] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -53,9 +55,16 @@ export default function App() {
           <h1 className="text-2xl font-bold">SpecSure</h1>
           <span className="text-sm text-blue-100">Indian Standards recommender for procurement specifications</span>
         </div>
+        <nav className="max-w-4xl mx-auto px-4 flex gap-1 text-sm">
+          {[["search", "Search"], ["tender", "Tender Check"]].map(([id, label]) => (
+            <button key={id} onClick={() => setTab(id)}
+              className={`px-4 py-1.5 rounded-t ${tab === id ? "bg-slate-50 text-navy font-semibold" : "text-blue-100 hover:text-white"}`}>{label}</button>
+          ))}
+        </nav>
       </header>
 
-      <main className="max-w-4xl w-full mx-auto px-4 py-8 flex-1">
+      <main className={`${tab === "tender" ? "max-w-6xl" : "max-w-4xl"} w-full mx-auto px-4 py-8 flex-1`}>
+        {tab === "tender" ? <TenderCheck /> : <>
         <form onSubmit={(e) => { e.preventDefault(); search(); }}>
           <textarea
             value={text}
@@ -113,6 +122,7 @@ export default function App() {
             ))}
           </ol>
         )}
+        </>}
       </main>
 
       <footer className="text-center text-xs text-slate-500 py-4 border-t border-slate-200">
