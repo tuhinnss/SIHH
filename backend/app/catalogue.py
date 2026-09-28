@@ -50,10 +50,14 @@ class CatalogueIndex:
         db.close()
         return cls(entries, sup)
 
-    def resolve(self, c: Citation) -> Entry | None:
-        """Exact key first; otherwise match ignoring the joint prefix (IS 60947-2 vs IS/IEC)."""
+    def resolve(self, c: Citation, exact_only: bool = False) -> Entry | None:
+        """Exact key first. Fallback ignores the joint prefix (IS 60947-2 vs IS/IEC 60947-2) but only
+        for long numbers (IEC/ISO style, >=5 digits): short numbers collide with unrelated plain IS
+        numbers (IS 691 is not IS/IEC 691)."""
         if c.key in self.entries:
             return self.entries[c.key]
+        if exact_only or len(c.number) < 5:
+            return None
         cands = self._by_np.get((c.number, c.part, c.section), [])
         return self.entries[cands[0]] if len(cands) == 1 else None
 

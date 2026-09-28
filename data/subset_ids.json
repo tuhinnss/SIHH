@@ -1,0 +1,1202 @@
+[
+{
+"identifier": "gov.in.is.16172.2023",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.17908.2023",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.18189.2023",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.18256.2023",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.2210.2023",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.5137.2023",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.6072.2023",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.8164.2023",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.14458.7.2022",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.16481.2022",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.2095.3.2022",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.10086.2021",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.12866.2021",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.17400.2021",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.17401.2021",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.17545.2021",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.3370.2.2021",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.458.2021",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.11504.2020",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.17372.2020",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.17373.2020",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.17374.2020",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.9743.2020",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.1443.2018",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.14458.5.2018",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.15895.2018",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.16714.2018",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.16720.2018",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.16993.2018",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.9417.2018",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.11652.2017",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.16525.2017",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.16526.2017",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.16532.2017",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.16651.2017",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.16709.2017",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.13920.2016",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.14276.2016",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.1489.1.2015",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.1489.2.2015",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.16349.2015",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.16353.2015",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.16354.2015",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.16355.2015",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.16415.2015",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.455.2015",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.4998.2015",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.8042.2015",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.5531.2014",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.12269.2013",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.13360.6.18.2013",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.13801.2013",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.15988.2013",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.269.2013",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.3812.1.2013",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.3812.2.2013",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.5410.2013",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.8112.2013",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.1237.2012",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.15786.2008",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.1786.2008",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.9730.2008",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.6073.2006",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.15541.2005",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.1677.2005",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.15265.2003",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.1592.2003",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.2645.2003",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.7113.2003",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.15213.2002",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.15224.2002",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.14206.2.2001",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.6603.2001",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.9550.2001",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.14856.2000",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.14862.2000",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.14871.2000",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.456.2000",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.14652.1999",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.3007.1.1999",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.3007.2.1999",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.4031.2.1999",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.785.1998",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.11320.1997",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.11761.1997",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.14425.1997",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.2098.1997",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.7651.1997",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.11551.1996",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.14399.1-2.1996",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.398.2.1996",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.4031.1.1996",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.14206.1.1995",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.14241.1995",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.2580.1995",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.12709.1994",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.13990.1994",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.13994.1994",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.14182.1994",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.14201.1994",
+"vertical": "steel_cement"
+},
+{
+"identifier": "gov.in.is.1285.2023",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.14407.2023",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.18285.2023",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.3934.2023",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.4026.2023",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.5484.2023",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.7247.3.2023",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.9997.2023",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.15450.2022",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.16614.2.2022",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.17803.2022",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.2600.7.2022",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.7813.2022",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.17441.1.2021",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.17441.2.2021",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.17505.1.2021",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.17682.2021",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.17735.2021",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.289.2021",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.398.6.2021",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.6614.2021",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.17055.12.2020",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.17293.2020",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.17441.2020",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.17443.2020",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.4200.2020",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.11139.2019",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.14494.2019",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.13730.5.2018",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.15573.2018",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.16269.2018",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.16614.1.2018",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.16939.2018",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.17046.2018",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.17048.2018",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.17049.2018",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.3585.2018",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.15660.2017",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.16102.2.2017",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.16107.2.2.2017",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.16205.1.2017",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.16205.21.2017",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.16205.22.2017",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.16205.23.2017",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.16205.24.2017",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.16476.1.2017",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.3961.2.2017",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.3961.7.2017",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.5230.2017",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.16490.2016",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.3961.6.2016",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.16246.2015",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.16337.2015",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.10322.1.2014",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.13109.12.2014",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.16146.2014",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.10322.5.5.2013",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.10322.5.6.2013",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.10322.5.8.2013",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.10558.2013",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.16017.2013",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.16083.2013",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.16128.2013",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.2339.2013",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.8130.2013",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.10322.5.1.2012",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.10322.5.2.2012",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.10322.5.3.2012",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.13730.0.3.2012",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.15885.2.13.2012",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.15961.2012",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.15965.2012",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.16011.2012",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.16012.2012",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.16101.2012",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.16102.1.2012",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.16103.1.2012",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.16103.2.2012",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.16104.2012",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.16105.2012",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.16106.2012",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.16107.1.2012",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.16107.2.1.2012",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.299.2012",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.13573.1.2011",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.13573.2.2011",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.13573.3.2011",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.7098.2.2011",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.12573.2010",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.694.2010",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.1660.2009",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.737.2008",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.1254.2007",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.5054.24.2007",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.11693.2006",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.14686.1.2006",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.438.2006",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.8953.2006",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.10569.2005",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.9089.2004",
+"vertical": "cables_electrical"
+},
+{
+"identifier": "gov.in.is.1536.2023",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.1729.2023",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.18182.2023",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.18188.2023",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.18384.2023",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.4127.2023",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.14333.2022",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.14885.2022",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.16719.2022",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.17875.2022",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.17876.2022",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.8008.2022",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.8360.2022",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.4985.2021",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.15155.2020",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.17425.2020",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.17482.2020",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.6392.2020",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.784.2019",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.8110.2019",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.13382.2018",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.1578.2018",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.1916.2018",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.6595.1.2018",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.9079.2018",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.16534.2017",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.16647.2017",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.4984.2016",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.16176.2014",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.10864.2013",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.13592.2013",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.16098.1.2013",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.16098.2.2013",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.3175.2013",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.9401.6.2013",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.15927.1.2012",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.15927.2.2012",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.16088.2012",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.2097.2012",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.2871.2012",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.7634.2.2012",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.1239.2.2011",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.15905.2011",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.15927.3.2011",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.12818.2010",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.1879.2010",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.3989.2009",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.13488.2008",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.14151.2.2008",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.15801.2008",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.4711.2008",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.15778.2007",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.651.2007",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.15647.2006",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.4530.2006",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.2643.2005",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.9645.2005",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.10748.2004",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.12820.2004",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.9271.2004",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.15328.2003",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.15430.2003",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.7634.3.2003",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.8008.6.2003",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.8999.2003",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.11346.2002",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.15225.2002",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.3589.2001",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.14787.2000",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.8329.2000",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.9523.2000",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.14151.1.1999",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.554.1999",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.3172.1997",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.5504.1997",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.14402.1996",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.11335.1995",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.1626.1.1994",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.1626.2.1994",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.1626.3.1994",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.9842.1994",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.1172.1993",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.13159.1.1993",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.1538.1993",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.404.1.1993",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.404.2.1993",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.6595.2.1993",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.903.1993",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.13257.1992",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.13479.1992",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.13593.1992",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.6173.2.1992",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.6175.6.1992",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.6175.7.1992",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.6175.8.1992",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.12987.1991",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.12988.1991",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.3468.1991",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.6908.1991",
+"vertical": "pipes_plumbing"
+},
+{
+"identifier": "gov.in.is.12918.1990",
+"vertical": "pipes_plumbing"
+}
+]

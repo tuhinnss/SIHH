@@ -43,6 +43,12 @@ class Linter:
                     "in_catalogue": e is not None, "latest_year": e.latest_year if e else None}
             cited_info.append(info)
             if e is None:
+                newer = self.cat.superseded_by.get(c.key)
+                if newer:
+                    names = ", ".join(self.cat.entries[k].is_number if k in self.cat.entries else k
+                                      for k in newer)
+                    flags.append(flag("superseded", "red",
+                                      f"{c.raw} is superseded by {names} per our records.", ref=c.raw))
                 flags.append(flag("not_in_catalogue", "amber",
                                   f"{c.raw} is not in our catalogue (older archive snapshot). "
                                   "Verify on BIS Know Your Standards.", ref=c.raw))

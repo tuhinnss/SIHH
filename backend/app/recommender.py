@@ -3,7 +3,9 @@
 import logging
 import re
 
+from app.citations import extract_citations
 from app.clause import tender_clause
+from app.lang import detect_lang
 from app.llm import LLMClient, LLMUnavailable
 from app.validator import validate_selection
 
@@ -19,7 +21,7 @@ EXPAND_SCHEMA = {
 }
 
 EXPAND_PROMPT = """You help search a catalogue of Indian Standard TITLES.
-Product/spec text (may be Hindi or Hinglish): {text}
+Product/spec text (detected language: {lang}; Hindi, Hinglish = romanised Hindi, or English): {text}
 
 1. english_query: the text translated to plain English (unchanged if already English).
 2. search_terms: up to 6 short alternative phrases that a standard's official TITLE might use for
@@ -40,6 +42,7 @@ Choose up to {top_k} candidates that apply, best first.
 - confidence: 0 to 1.
 Skip candidates that do not apply."""
 
+POOL = 50
 _DEVANAGARI = re.compile(r"[ऀ-ॿ]")
 
 
@@ -61,36 +64,42 @@ def select_schema(candidate_numbers: list[str]) -> dict:
 
 
 class Recommender:
-    def __init__(self, retriever, llm: LLMClient | None, catalogue: dict[str, dict], cert=None) -> None:
+    def __init__(self, retriever, llm: LLMClient | None, catalogue: dict[str, dict], cert=None,
+                 graph=None) -> None:
         """catalogue: display is_number -> latest-edition row (the validation table)."""
         self.retriever = retriever
         self.llm = llm
         self.catalogue = catalogue
         self.cert = cert
+        self.graph = graph
 
-    def _expand(self, text: str) -> tuple[str, list[str]]:
+    def _expand(self, text: str, lang: str = "en") -> tuple[str, list[str]]:
         if not self.llm or not self.llm.providers:
             return text, []
         try:
-            out = self.llm.generate_json(EXPAND_PROMPT.format(text=text), EXPAND_SCHEMA)
+            out = self.llm.generate_json(EXPAND_PROMPT.format(text=text, lang=lang), EXPAND_SCHEMA)
             eng = (out.get("english_query") or text).strip()
             terms = [t for t in out.get("search_terms", []) if isinstance(t, str)][:6]
             return eng, terms
         except (LLMUnavailable, KeyError, ValueError, TypeError):
             return text, []
 
-    def recommend(self, text: str, top_k: int = 10, rerank: bool = False) -> dict:
-        english, terms = self._expand(text)
+    def recommend(self, text: str, top_k: int = 10, rerank: bool = False, lang: str | None = None) -> dict:
+        lang = lang or detect_lang(text)
+        english, terms = self._expand(text, lang)
         extra = [t for t in terms]
         if english != text:
             extra.append(text)  # embed the original-language text as well
-        hits = self.retriever.search(english, top_k=top_k, rerank=rerank,
-                                     extra_queries=extra or None, pool=50)
+        use_llm = bool(self.llm and self.llm.providers)
+        # the LLM chooses from the whole retrieval pool; retrieval-only mode shows the top_k
+        hits = self.retriever.search(english, top_k=POOL if use_llm else top_k, rerank=rerank,
+                                     extra_queries=extra or None, pool=POOL)
+        hits = self._with_cited(text, hits)
         by_num = {h["is_number"]: h for h in hits}
         llm_used, dropped = False, []
         results: list[dict] = []
 
-        if self.llm and self.llm.providers and hits:
+        if use_llm and hits:
             cand_lines = "\n".join(
                 f"- {h['is_number']} ({h['year'] or 'year unknown'}): {h['title']}" for h in hits)
             try:
@@ -111,8 +120,22 @@ class Recommender:
         if not results:  # no LLM, LLM failed, or it selected nothing valid
             llm_used = False
             results = [self._card(h, "primary", None, None) for h in hits[:top_k]]
-        return {"results": results, "llm_used": llm_used, "english_query": english,
+        return {"results": results, "llm_used": llm_used, "english_query": english, "lang": lang,
                 "dropped_invalid": len(dropped)}
+
+    def _with_cited(self, text: str, hits: list[dict]) -> list[dict]:
+        """Standards named in the requirement text itself (matched against the catalogue) join the
+        candidate list, at the front."""
+        if not self.graph:
+            return hits
+        have = {h["is_number"] for h in hits}
+        extra = []
+        for c in extract_citations(text):
+            e = self.graph.cat.resolve(c)
+            if e and e.is_number not in have and e.is_number in self.catalogue:
+                extra.append(dict(self.catalogue[e.is_number], score=1.0))
+                have.add(e.is_number)
+        return extra + hits
 
     def _card(self, h: dict, relevance: str, reason: str | None, conf: float | None) -> dict:
         row = self.catalogue.get(h["is_number"], h)
@@ -120,7 +143,11 @@ class Recommender:
             "is_number": row["is_number"], "title": row["title"], "year": row["year"],
             "relevance": relevance, "reason": reason,
             "confidence": conf if conf is not None else round(h["score"], 4),
-            "supersedes_info": None, "allied": [],
+            "key": row.get("key"),
+            "supersedes_info": self.graph.supersedes_info(row["key"]) if self.graph and row.get("key") else None,
+            "allied": self.graph.allied(row["key"], limit=8) if self.graph and row.get("key") else [],
+            "editions": sorted(self.graph.cat.entries[row["key"]].years)
+            if self.graph and row.get("key") in self.graph.cat.entries else None,
             "certification": self.cert.for_is(row["is_number"]) if self.cert else None,
             "source_url": row["source_url"],
             "clause": tender_clause(row["is_number"], row["year"], row["title"]),

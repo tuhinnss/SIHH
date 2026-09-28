@@ -1,55 +1,150 @@
 # SpecSure — SIH26108 (Team "Ding Ding")
 
-AI-powered recommendation of applicable Indian Standards for procurement specifications.
-**Prototype — verify on BIS Know Your Standards.**
+AI-powered recommendation of applicable **Indian Standards** for procurement specifications
+(Ministry of Consumer Affairs / Bureau of Indian Standards).
 
-## Data & honesty rules
-- Every IS number comes from `data/catalogue.jsonl`, built from the Internet Archive
-  `gov.in.is.*` collection (22,025 records → 19,700 distinct standards). It is an **older
-  snapshot** (only ~3,200 records are from 2015 or later), so "latest version" means
-  *as per our catalogue*.
-- No standard texts or PDFs are stored in git — metadata only. Raw downloads go to `data/raw/` (git-ignored).
-- Certification info shows only for rows hand-filled in `data/certification.csv` (currently empty).
+> **Prototype — verify on BIS Know Your Standards.** The catalogue is an older Internet Archive
+> snapshot; "latest version" always means *as per our catalogue*.
 
-## Phase 1 setup
-```bash
-cd backend
-pip install -r requirements.txt   # CPU torch: pip install torch --index-url https://download.pytorch.org/whl/cpu
-python -m data_pipeline.fetch_catalogue   # ~1.5 min, cached; writes data/catalogue.jsonl + data/specsure.sqlite
-python -m data_pipeline.build_index       # ~15 min on 4 CPUs (bge-m3); EMBED_MODEL=intfloat/multilingual-e5-small is faster
-uvicorn app.main:app --port 8000
-cd ../frontend && npm install && npm run dev   # http://localhost:5173
-python -m pytest backend/tests
+A procurement officer pastes a spec line (English, Hindi or Hinglish) or uploads a tender PDF and gets,
+per line item: ranked Indian Standards with a one-line reason, allied standards (normative references,
+test methods, terminology, other parts of the same IS), version/supersession status, a dated
+certification hint (only when a hand-verified row exists) and a copy-ready tender clause. A Tender Linter
+flags risky citations and wording.
+
+## Hard rules baked into the code
+| Rule | How it is enforced |
+|---|---|
+| No IS number/title/year/certification rule from memory | Everything comes from downloaded data (`data/catalogue.jsonl`, extracted edges, `certification.csv`); unknown shows "unknown" |
+| LLM may only choose retrieved candidates | JSON schema whose `is_number` is an **enum of the candidates**; then `validator.py` re-checks candidate + catalogue membership, drops and logs the rest (`data/invented_is_log.jsonl`) |
+| No BIS texts in git | Only metadata, ≤800-char scope snippets and reference links are stored; raw downloads live in `data/raw/` (git-ignored); OCR text is processed in memory and discarded |
+| Polite scraping | 1 request/second, on-disk cache, exponential backoff (`data_pipeline/common.py`) |
+| Free stack, keys not in git | Gemini free tier → Groq fallback; keys read from `.env` (`.env.example` committed) |
+
+## Architecture
+```mermaid
+flowchart LR
+  subgraph Offline["Data pipeline (backend/data_pipeline)"]
+    IA[(Internet Archive<br/>gov.in.is.*)] --> FC[fetch_catalogue<br/>parse number/part/year/title]
+    FC --> DB[(SQLite: standards)]
+    IA --> ER[extract_refs<br/>scope, referred IS, supersedes]
+    ER --> BE[build_edges] --> DB2[(SQLite: edges, scope snippets)]
+    DB --> BI[build_index]
+    DB2 --> BI
+    BI --> IDX[(BM25 + bge-m3 vectors)]
+    CSV[certification.csv<br/>hand-filled, dated] --> OUT
+  end
+  subgraph Online["FastAPI (backend/app)"]
+    Q[Query: EN / HI / Hinglish] --> LD[detect_lang]
+    LD --> EX[LLM: translate + title-style search terms<br/>no IS numbers]
+    EX --> HY[Hybrid retrieval<br/>BM25 + dense, RRF, top-50]
+    IDX --> HY
+    HY --> RR[bge-reranker<br/>optional]
+    RR --> SEL[LLM select<br/>is_number enum = candidates]
+    SEL --> VAL[Validator<br/>candidate + catalogue check]
+    VAL --> OUT[Cards: reason, allied, version,<br/>certification, clause]
+    DB2 --> OUT
+    PDF[Tender PDF] --> SPL[PyMuPDF + line-item splitter] --> OUT
+    SPL --> LINT[Tender Linter]
+    DB2 --> LINT
+  end
+  OUT --> UI[React + Vite + Tailwind<br/>Search · Tender Check · Standard graph · About]
+  LINT --> UI
 ```
+Without LLM keys (or when both providers fail) `/recommend` degrades to retrieval-only results
+(`X-LLM-Used: false`) and the UI says so.
 
-## Known Phase 1 limitation
-Retrieval is vocabulary-bound: "TMT steel bars" does not surface IS 1786 (its title says
-"High strength deformed steel bars…"). LLM query expansion and reranking come in Phase 2.
+## Setup
+```bash
+cp .env.example .env            # add GEMINI_API_KEY / GROQ_API_KEY (optional; app works without)
+cd backend
+pip install -r requirements.txt  # CPU torch: pip install torch --index-url https://download.pytorch.org/whl/cpu
+```
+Build the data (order matters; each step is cached/resumable):
+```bash
+python -m data_pipeline.fetch_catalogue   # ~2 min: archive.org Scraping API -> catalogue.jsonl + SQLite
+python -m data_pipeline.select_subset     # ~300 standards in 3 verticals (steel/cement, cables/electrical, pipes/plumbing)
+python -m data_pipeline.extract_refs      # ~20-60 min, 1 req/s: scope + referred IS + supersession (resumable)
+python -m data_pipeline.build_edges       # edges table + scope snippets (re-run after fetch_catalogue)
+python -m data_pipeline.build_index       # BM25 + bge-m3; first run ~15 min on 4 CPUs, later runs re-embed only changed docs
+                                          # (EMBED_MODEL=intfloat/multilingual-e5-small is faster)
+```
+Run:
+```bash
+uvicorn app.main:app --port 8000
+cd ../frontend && npm install && npm run dev      # http://localhost:5173 (proxies /api -> :8000)
+```
+Tests / eval (from `backend/`):
+```bash
+python -m pytest tests                            # LLM is stubbed
+python -m data_pipeline.check_certification       # validate your hand-filled certification.csv
+python -m eval.run_eval                           # needs gold_is filled in eval/eval_set.jsonl
+```
+Model ids are overridable (`GEMINI_MODEL`, `GROQ_MODEL`, `EMBED_MODEL`, `RERANK_MODEL`); check the
+providers' current free-tier names. A Docker setup is not included.
 
-## Phase 2: LLM selection (Gemini -> Groq fallback)
-Flow: LLM expands/translates the query (search terms only, no IS numbers) -> hybrid retrieval
-over query + expansions -> LLM picks from the top-50 candidates through a JSON schema whose
-`is_number` is an **enum of those candidates** -> every pick is re-validated against the
-catalogue; anything else is dropped and logged to `data/invented_is_log.jsonl` -> the copy-ready
-clause is built from catalogue fields, never from LLM text. With no keys or on LLM failure the API
-returns retrieval-only results (`X-LLM-Used: false`, no reasons).
+## API
+| Endpoint | Purpose |
+|---|---|
+| `GET /health` | liveness |
+| `POST /recommend {text, lang?, top_k=10}` | ranked cards: `is_number,title,year,relevance,reason,confidence,supersedes_info,allied[],certification,source_url,clause` (+ headers `X-LLM-Used`, `X-Detected-Lang`) |
+| `POST /analyze-tender` (multipart PDF) | line items + recommendations + linter flags |
+| `GET /standard/{is_number}` | details, editions, scope extract, allied list, graph nodes/links |
+| `GET /stats` | catalogue size, edges by type, last sync |
 
-Keys are read from `.env` or environment variables. `python -m pytest backend/tests` runs with a stub LLM.
-**Status:** tested against a stub only; not yet run against live Gemini/Groq.
-
-## Phase 3: Tender Check
-`POST /analyze-tender` (PDF, max 20 MB): PyMuPDF text -> line items (numbered lines, BOQ table rows,
-bullets; LLM-assisted split only if heuristics find <2 items; first 40 items analysed) ->
-`/recommend` logic per item -> Tender Linter:
-
+### Tender Linter
 | Flag | Severity | Rule |
 |---|---|---|
-| superseded | red | cited IS is the older side of a `supersedes` edge (edges arrive in Phase 4) |
-| no_certification | red | `certification.csv` (dated, active rows only) requires a mark but the item has no certification wording |
+| superseded | red | cited IS is the older side of a `supersedes` edge |
+| no_certification | red | active `certification.csv` row applies but the item has no certification wording |
 | not_in_catalogue | amber | cited IS not in our (older) catalogue |
 | older_edition | amber | cited year < catalogue's latest year |
-| brand_name | amber | pattern-based (®/™, "Make:", "M/s X") and no "or equivalent" |
+| brand_name | amber | ®/™, "Make: X", "M/s X" without "or equivalent" |
 
-The UI exports a printable audit report (browser "Save as PDF"). `docs/sample_tender.pdf` is a
-synthetic demo input. Limitations: scanned/image-only PDFs need OCR (not included); all-caps text
-such as "PRICE IS 100" can look like a citation and will be flagged "not in catalogue".
+### Edge types
+`normative_ref`, `test_method` and `terminology` come from the referred-standards list (typed by the
+target's catalogue title); `scope_ref` = named only in the Scope clause; `supersedes` from
+"(Superseding IS …)" notes in catalogue titles and foreword sentences; `same_series` (other parts of
+the same IS number) is derived from the catalogue at query time. Edges are stored only for the ~300
+extracted standards (plus title-based supersession catalogue-wide).
+
+## Filling in your own data
+* **Certification:** `data/certification.csv` (header only). Copy from bis.gov.in "Products under
+  Compulsory Certification": `product,is_number,scheme (ISI/QCO|CRS|Hallmarking),order_reference,
+  effective_date,withdrawn_date,source_url,last_verified`. Run `check_certification` afterwards. The app
+  shows certification only for rows that are active today.
+* **Evaluation:** replace the empty `gold_is` in `backend/eval/eval_set.jsonl` with IS numbers cited by
+  real GeM/CPPP tenders.
+
+## Demo script (5 minutes)
+1. **About** tab: catalogue size, edges, honest disclaimers (older snapshot).
+2. **Search** "PVC pipes for drinking water supply" → primary IS badge, reason, allied chips grouped by
+   type, version badge, **Copy tender clause**, Source link.
+3. Search the Hindi example and "pani ke liye pvc pipe" (Hinglish).
+4. Click an IS badge → **Standard** page with the allied-standards graph; click a node to walk the graph.
+5. **Tender Check** → upload `docs/sample_tender.pdf` (synthetic) → red/amber flags → **Export audit report**.
+6. Mention the safeguards: enum-constrained LLM, validator log, no BIS texts in git.
+
+## Current data snapshot (this build)
+* 22,025 catalogue records → 19,700 searchable standards (latest edition each).
+* References/scope/supersession extracted for 298 of 300 subset standards (2 archive downloads keep
+  failing): 1,300 stored edges (909 normative_ref, 195 test_method, 47 terminology, 65 scope_ref,
+  84 supersedes) and 248 scope snippets. 81% of extracted references resolve to a catalogue entry;
+  the rest are standards missing from the older snapshot.
+* `certification.csv` is empty until you fill it, so no certification badge/flag appears yet.
+
+## Known limitations
+* Catalogue is an older archive snapshot (only ~3,200 of 22,025 records are from 2015 or later);
+  standards published later are missing and will show "not in catalogue".
+* Relations exist for a ~300-standard subset; OCR errors can drop or garble references.
+* Retrieval is title-based: abbreviations absent from titles (e.g. "TMT") rely on the LLM's query
+  expansion; without keys those queries can miss.
+* PDF parsing is heuristic; scanned (image-only) tenders need OCR (not included). All-caps text such
+  as "PRICE IS 100" can look like a citation and is flagged "not in catalogue".
+* Free-tier LLM quotas are small: Gemini returns HTTP 429/503 under load, so the client cools a
+  rate-limited provider down for 60 s and fails over to Groq; if both fail, results are retrieval-only.
+  Defaults are `gemini-flash-lite-latest` and Groq `openai/gpt-oss-120b` (the smaller gpt-oss-20b chose
+  worse standards in our TMT test). Model names change often; override with `GEMINI_MODEL` / `GROQ_MODEL`.
+* LLM reasons are one-line summaries by a small model; they are constrained to catalogue candidates
+  but the *explanation text* can still over-claim. The IS number, title and year always come from the catalogue.
+* No accuracy numbers are published yet: `eval/eval_set.jsonl` needs real gold rows from tenders.
