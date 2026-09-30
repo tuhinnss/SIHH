@@ -22,7 +22,7 @@ from eval.metrics import mrr, ndcg_at_k, recall_at_k  # noqa: E402
 
 def load_rows(path: Path, graph: Graph):
     rows, unknown, skipped = [], [], 0
-    for line in open(path):
+    for line in open(path, encoding="utf-8"):
         if not line.strip():
             continue
         r = json.loads(line)

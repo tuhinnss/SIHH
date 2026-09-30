@@ -29,7 +29,7 @@ def validate_selection(items: list[dict], candidates: set[str], catalogue: set[s
         log.warning("dropped %d LLM items for %r: %s", len(dropped), query,
                     [(d.get("is_number"), d["drop_reason"]) for d in dropped])
         try:
-            with open(INVENTED_LOG, "a") as f:
+            with open(INVENTED_LOG, "a", encoding="utf-8") as f:
                 for d in dropped:
                     if d["drop_reason"] != "duplicate":
                         f.write(json.dumps({"ts": time.time(), "query": query, **d}) + "\n")

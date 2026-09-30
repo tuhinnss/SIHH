@@ -24,7 +24,7 @@ class CertificationTable:
     def load(cls, path: Path = DATA / "certification.csv") -> "CertificationTable":
         if not path.exists():
             return cls([])
-        with open(path, newline="") as f:
+        with open(path, newline="", encoding="utf-8-sig") as f:
             return cls([r for r in csv.DictReader(f) if (r.get("is_number") or r.get("product"))])
 
     def active(self, today: date | None = None) -> list[dict]:

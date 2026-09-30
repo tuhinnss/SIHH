@@ -20,7 +20,7 @@ SKIP = re.compile(r"handbook|glossary|methods? of test|code of practice for", re
 
 
 def main() -> None:
-    docs = json.loads((INDEX_DIR / "docs.json").read_text())
+    docs = json.loads((INDEX_DIR / "docs.json").read_text(encoding="utf-8"))
     picked: dict[str, str] = {}
     for vert, pat in VERTICALS.items():
         rx = re.compile(pat, re.I)
@@ -32,7 +32,7 @@ def main() -> None:
         for d in cands[:PER_VERTICAL]:
             picked[d["identifier"]] = vert
     out = [{"identifier": i, "vertical": v} for i, v in picked.items()]
-    (DATA / "subset_ids.json").write_text(json.dumps(out, indent=0))
+    (DATA / "subset_ids.json").write_text(json.dumps(out, indent=0), encoding="utf-8")
     print(len(out), {v: sum(1 for o in out if o["vertical"] == v) for v in VERTICALS})
 
 
