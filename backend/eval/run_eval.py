@@ -17,7 +17,7 @@ from app.graph import Graph  # noqa: E402
 from app.llm import LLMClient  # noqa: E402
 from app.recommender import Recommender  # noqa: E402
 from app.retrieval import Retriever  # noqa: E402
-from eval.metrics import mrr, ndcg_at_k, recall_at_k  # noqa: E402
+from eval.metrics import hit_at_k, mrr, ndcg_at_k, recall_at_k  # noqa: E402
 
 
 def load_rows(path: Path, graph: Graph):
@@ -42,6 +42,10 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--file", default=str(Path(__file__).with_name("eval_set.jsonl")))
     ap.add_argument("--k", type=int, default=10)
+    ap.add_argument("--single", action="store_true",
+                    help="full pipeline one query at a time (Search path, 2 LLM calls per row) instead of "
+                         "batched like Tender Check (~1 LLM call per 4 rows)")
+    ap.add_argument("--rerank", action="store_true", help="add the cross-encoder reranker (off in the app)")
     a = ap.parse_args()
 
     retr = Retriever()
@@ -64,31 +68,36 @@ def main() -> None:
     }
     invented = 0
     llm_rejected = 0
+    batched: dict[str, dict] = {}
+    if not a.single:  # Tender Check path: all rows in a few batched LLM calls, computed once
+        batched = dict(zip([r["query"] for r in rows], rec.recommend_many([r["query"] for r in rows], top_k=a.k)))
 
     def full(q):
         nonlocal invented, llm_rejected
-        out = rec.recommend(q, top_k=a.k, rerank=True)
+        out = batched.get(q) or rec.recommend(q, top_k=a.k, rerank=a.rerank)
         keys = [c["key"] for c in out["results"]]
         invented += sum(1 for k in keys if k not in catalogue_keys)
         llm_rejected += out["dropped_invalid"]
         return keys
-    have_llm = bool(llm.providers)
-    setups["Hybrid + rerank + LLM" + ("" if have_llm else " (no LLM keys: rerank only)")] = full
+    name = ("Hybrid + LLM" + (" + rerank" if a.rerank and a.single else "") + (" (single)" if a.single else " (batched)")
+            + ("" if llm.providers else " [no LLM keys: retrieval only]"))
+    setups[name] = full
 
-    lines = ["| Setup | Recall@5 | Recall@10 | MRR | nDCG@10 |", "|---|---|---|---|---|"]
+    lines = ["| Setup | Hit@5 | Recall@5 | Recall@10 | MRR | nDCG@10 |", "|---|---|---|---|---|---|"]
     for name, fn in setups.items():
-        r5 = r10 = m = n = 0.0
+        h5 = r5 = r10 = m = n = 0.0
         misses = []  # rows with no gold standard in top k; the last (full) setup's are printed
         for row in rows:
             ranked = fn(row["query"])
             if not set(ranked[:a.k]) & row["gold"]:
                 misses.append((row, ranked[:3]))
+            h5 += hit_at_k(ranked, row["gold"], 5)
             r5 += recall_at_k(ranked, row["gold"], 5)
             r10 += recall_at_k(ranked, row["gold"], 10)
             m += mrr(ranked, row["gold"])
             n += ndcg_at_k(ranked, row["gold"], 10)
         c = len(rows)
-        lines.append(f"| {name} | {r5 / c:.3f} | {r10 / c:.3f} | {m / c:.3f} | {n / c:.3f} |")
+        lines.append(f"| {name} | {h5 / c:.3f} | {r5 / c:.3f} | {r10 / c:.3f} | {m / c:.3f} | {n / c:.3f} |")
     print("\n".join(lines))
     print(f"\nMisses of the last setup ({len(misses)}/{len(rows)}): query | gold | got top 3")
     for row, got in misses:
