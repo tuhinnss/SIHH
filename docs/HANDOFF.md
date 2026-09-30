@@ -22,6 +22,11 @@ with scope snippets; BM25 is now title-only). All §5 sanity checks pass on the 
 | 40-item tender page | 80 calls (~4–5 min, rate-limit risk) | 10 calls, ~75 s, all 40 AI-ranked |
 Gemini latency varies a lot (the same batched sample tender once took 49 s); the client retries 5xx silently.
 
+**Session 2, real data:** GeM bid documents are parsed by item section (`tender.gem_items`, BOQ and category
+layouts); IS citations with Roman/hyphenated/bare parts are read; first accuracy numbers from 48 reviewed rows of
+16 real public tenders (full pipeline Hit@5 0.83 vs hybrid retrieval 0.45; see README "Accuracy");
+`data_pipeline.qco_orders` drafts certification rows (with start-date evidence) from the saved BIS Scheme-I page.
+
 ## 1. Where things stand
 All five planned phases are built and were verified in a real browser and against live Gemini/Groq:
 
@@ -31,21 +36,27 @@ All five planned phases are built and were verified in a real browser and agains
 | Retrieval | BM25 (bm25s) over `IS number: title` + bge-m3 dense over title (+ scope snippet), RRF fusion, top-50 pool, optional bge-reranker (off by default; did not help on TMT test) |
 | LLM | Query expansion/translation → enum-constrained selection → validator → reason grounding → clause built from catalogue fields. Gemini → Groq failover, 60 s cooldown on HTTP 429. Falls back to retrieval-only (`X-LLM-Used: false`). Results are LRU-cached (fallbacks are not, while an LLM is configured). Tenders use `recommend_many`: 1 expansion call per 20 items + 1 selection call per 5 items (30 candidates each), validated per item |
 | Relations | 298/300 subset standards extracted (steel/cement, cables/electrical, pipes/plumbing) → 1,300 edges (909 normative_ref, 195 test_method, 47 terminology, 65 scope_ref, 84 supersedes); 248 scope snippets. 81% of extracted refs resolve to the catalogue. `same_series` is derived at query time. |
-| Tender Check | PyMuPDF → line items (numbered/BOQ/bullets; LLM split only if <2 items) → recommend per item (40 per request; `?offset=` + "Analyse items 41–80" button for more) → linter (superseded🔴, no_certification🔴, not_in_catalogue🟠, older_edition🟠, brand_name🟠) → printable audit report. Image-only (scanned) pages are counted and reported in `warning`; no OCR |
+| Tender Check | PyMuPDF → line items (GeM bid documents: item sections via `tender.gem_items`; otherwise numbered/BOQ/bullets; LLM split only if <2 items) → recommend per item (40 per request; `?offset=` + "Analyse items 41–80" button for more) → linter (superseded🔴, no_certification🔴, not_in_catalogue🟠, older_edition🟠, brand_name🟠) → printable audit report. Image-only (scanned) pages are counted and reported in `warning`; no OCR |
 | Frontend | React+Vite+Tailwind: Search, Tender Check, Standard (react-force-graph-2d), About |
-| Tests | 78 pytest tests (parsers, citations incl. strip_citations, eval row harvesting, index texts, batched dense ranking, validator, reason grounding, recommender with stub LLM incl. cache and tender batching, linter, tender/PDF incl. paging and scans, certification check, metrics); CI runs them plus the frontend build (`.github/workflows/ci.yml`) |
-| Eval | `backend/eval` harness works (BM25/dense/hybrid/hybrid+rerank+LLM; invented-IS count must be 0) but `eval_set.jsonl` has **no gold rows** → no accuracy numbers exist yet |
+| Tests | 91 pytest tests (parsers, citations incl. strip_citations and Roman-numeral parts, GeM bid layouts, QCO order parsing, eval row harvesting, index texts, batched dense ranking, validator, reason grounding, recommender with stub LLM incl. cache and tender batching, linter, tender/PDF incl. paging and scans, certification check, metrics); CI runs them plus the frontend build (`.github/workflows/ci.yml`) |
+| Eval | `eval/tender_rows.jsonl`: 48 reviewed rows from 16 real public tenders (42 scoreable). Full pipeline (batched, no reranker) Hit@5 0.833, Recall@5 0.695, MRR 0.782; hybrid retrieval alone Hit@5 0.452; invented IS 0. Drop reasons in `tender_rows_dropped.jsonl`, URLs in `tender_sources.csv` (PDFs in git-ignored `tenders/`). `eval_set.jsonl` (5 demo queries) still has no gold |
 | Certification | `data/certification.csv` is an empty template on purpose |
 
 ## 2. Prioritised to-do (highest value first)
-1. **Real evaluation.** Ask the user for (or help them collect) 30–100 real GeM/CPPP tender lines with the IS
-   numbers they cite. Easiest path: real tender PDFs → `python -m eval.from_tenders *.pdf` (query = item text minus
-   citations, gold = what the tender cited) → user reviews `eval/tender_rows.jsonl` → `python -m eval.run_eval --file
-   eval/tender_rows.jsonl`, which also lists the full pipeline's misses. Or fill `backend/eval/eval_set.jsonl` by hand;
-   analyse failures by category (abbreviation gaps like "TMT", multi-part standards, Hindi). Never invent gold rows.
+1. **Grow and use the evaluation.** First pass done (48 rows, see §1). Next: more rows (lighting has only 7; aim
+   for 100), have the user skim `tender_rows.jsonl`, then fix the main miss type — the right standard with the
+   wrong part (IS 9537 Part 1 vs Part 3; IS 10124 Parts 8–10 vs Part 1) — e.g. by showing the LLM part titles
+   side by side or preferring "General requirements" parts. Harvest: `python -m eval.from_tenders tenders/*.pdf
+   --out eval/new.jsonl`, review, append. Never invent gold rows; drop standards-reference-list rows (their
+   query is the standard's own title) and rows from OCR'd scans whose numbers are misread.
 2. **Certification table** — the user fills `data/certification.csv` by hand; you only run
    `python -m data_pipeline.check_certification` and verify the badge/`no_certification` flag end to end
-   (currently only unit-tested with fake rows).
+   (currently only unit-tested with fake rows). Helper (session 2, at the user's request):
+   `data_pipeline.qco_orders` builds `data/raw/certification_draft.csv` from the saved BIS Scheme-I page and its
+   531 order PDFs: 187/604 products get a suggested start date with evidence (steel well covered); the 2003 Cement
+   (S.O. 191(E)) and Electrical Wires/Cables (S.O. 189(E)) orders and 41 others are scanned images, so those rows
+   need the user to read the order. The "come into force on the date of its publication" sentence is the order's
+   own start, not the product's; the per-product term is in the schedule table.
 3. **Grow relation coverage** beyond the 300-standard subset: edit `VERTICALS`/`PER_VERTICAL` in
    `data_pipeline/select_subset.py` (or add verticals), rerun `extract_refs` (resumable; ~3–20 s/standard at 1 req/s),
    then `build_edges` and `build_index`. Ask the user which procurement categories matter for the demo first
@@ -89,6 +100,15 @@ All five planned phases are built and were verified in a real browser and agains
   limits (untested), and a 429 on Gemini fails over to Groq, whose token limit is small for ~14k-char batch prompts.
 * **Model load:** `Retriever.model` tries `local_files_only=True` first (skips a ~10 s Hugging Face online check);
   importing torch/transformers alone takes 12–22 s on this Windows machine.
+* **GeM bid documents** (the most common tender PDF): most IS numbers in them sit in GeM's "GeMARPTS" box — GeM's
+  own search suggestions (towels, sofas, catheters) — never the buyer's citations. `gem_items` reads only item
+  sections. BOQ bids: heading line, then "<hindi> /Technical Specifications", specs are "View File" attachments.
+  Category bids: "Technical Specifications/<hindi>", heading wraps and ends "( 40 pieces )", a parameter table
+  follows. Make-in-India bids insert a two-line "Minimum 50% and 20% Local Content ..." note (and "Bis Required /
+  Yes") before the marker. Hindi labels extract garbled — match English markers only.
+* **Citation styles in real tenders:** "IS:1554 (Part-I)", "IS 3961 (Pt II)", "IS:694 part I 1990" (Roman, hyphen,
+  bare part after the year) — handled in `citations._CITE`. Scanned-and-OCR'd tenders misread digits ("IS:17B6",
+  "IS:66Q3"); cross-check eval gold against catalogue titles.
 * **Frontend proxy targets `127.0.0.1:8000`, not `localhost`:** Node 17+ resolves localhost to `::1` first, uvicorn
   listens on IPv4 only → `ECONNREFUSED ::1:8000` and 502 on every `/api` call (seen on Windows).
 * **LLM models:** defaults `gemini-flash-lite-latest` and Groq `openai/gpt-oss-120b`; both overridable
@@ -118,7 +138,7 @@ All five planned phases are built and were verified in a real browser and agains
 ## 5. Sanity checks after setting up a new machine
 All four passed on the local Windows machine on 2026-09-30 (plus Hindi/Hinglish PVC queries → IS 4985 primary, a
 scanned PDF → warning, a 45-item tender → 40 + "Analyse items 41–45").
-1. `python -m pytest tests` → 78 passed.
+1. `python -m pytest tests` → 91 passed.
 2. `curl -X POST localhost:8000/recommend -H 'content-type: application/json' -d '{"text":"TMT steel bars for RCC"}'` →
    with keys: IS 1786 primary and header `X-LLM-Used: true`; without keys: retrieval-only.
 3. Frontend Tender Check with `docs/sample_tender.pdf` → 1 red (IS 445 superseded by IS 444), 4 amber.
