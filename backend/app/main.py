@@ -1,3 +1,4 @@
+import json
 import sqlite3
 from datetime import date
 from contextlib import asynccontextmanager
@@ -89,8 +90,11 @@ def stats():
         n = db.execute("select count(*) from standards").fetchone()[0]
         by_type = dict(db.execute("select edge_type,count(*) from edges group by edge_type").fetchall())
         scoped = db.execute("select count(*) from standards where scope_snippet is not null").fetchone()[0]
-    ia = DATA_DIR / "raw" / "ia_docs.jsonl"
-    synced = date.fromtimestamp(ia.stat().st_mtime).isoformat() if ia.exists() else None
+    meta, ia = DATA_DIR / "catalogue_meta.json", DATA_DIR / "raw" / "ia_docs.jsonl"
+    if meta.exists():
+        synced = json.loads(meta.read_text(encoding="utf-8")).get("synced")
+    else:
+        synced = date.fromtimestamp(ia.stat().st_mtime).isoformat() if ia.exists() else None
     return {"catalogue_records": n, "retrieval_documents": len(state["retriever"].docs),
             "edges": sum(by_type.values()), "edges_by_type": by_type,
             "standards_with_scope_text": scoped, "last_sync": synced,
