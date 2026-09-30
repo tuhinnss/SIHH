@@ -30,8 +30,8 @@ def analyze_pdf(pdf_bytes: bytes, filename: str, rec: Recommender, linter, max_i
     end = offset + max_items
     truncated = len(items) > end
     out_items = []
-    for i, it in enumerate(items[offset:end], offset + 1):
-        recs = rec.recommend(it, top_k=5)
+    page = items[offset:end]
+    for i, it, recs in zip(range(offset + 1, end + 1), page, rec.recommend_many(page, top_k=5)):
         cards = recs["results"]
         primary = next((c for c in cards if c["relevance"] == "primary"), None)
         flags, cited = linter.lint_item(it, primary)

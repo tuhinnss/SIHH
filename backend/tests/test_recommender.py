@@ -267,3 +267,58 @@ def test_ungrounded_reason_removed_from_card(tmp_path, monkeypatch):
     rec, _ = make(respond)
     out = rec.recommend("TMT steel bars")
     assert [(r["is_number"], r["reason"]) for r in out["results"]] == [("IS 1786", None), ("IS 4985", "PVC pipes.")]
+
+
+class PerQueryRetriever:
+    """Bar queries get the steel standards, everything else the PVC one."""
+    def search(self, query, **kw):
+        return [dict(d) for d in (DOCS[:2] if "bar" in query.lower() else DOCS[2:])]
+
+
+def _batch_responder(calls, fail_select_for=()):
+    def respond(prompt, schema):
+        calls.append(prompt)
+        item_props = schema["properties"].get("items", {}).get("items", {}).get("properties", {})
+        if "english_query" in item_props:  # batched expansion
+            return {"items": [{"item": n, "english_query": q, "search_terms": []}
+                              for n, q in enumerate(["TMT bars", "PVC pipes", "Steel bars"], 1)]}
+        if any(f in prompt for f in fail_select_for):
+            raise RuntimeError("quota")
+        pick = {"TMT bars": "IS 1786", "PVC pipes": "IS 4985", "Steel bars": "IS 432 (Part 1)"}
+        items = []
+        for n in range(1, 4):
+            if f"Requirement {n}: " in prompt:
+                req = prompt.split(f"Requirement {n}: ")[1].split("\n")[0]
+                # IS 4985 for a bar item is another item's candidate -> must be dropped
+                items.append({"item": n, "selected": [
+                    {"is_number": pick[req], "relevance": "primary", "reason": "Fits.", "confidence": 0.9},
+                    {"is_number": "IS 4985", "relevance": "allied", "reason": "Pipes.", "confidence": 0.1}]})
+        return {"items": items}
+    return respond
+
+
+def test_recommend_many_batches_llm_calls_and_validates_per_item(tmp_path, monkeypatch):
+    monkeypatch.setattr("app.validator.INVENTED_LOG", tmp_path / "log.jsonl")
+    monkeypatch.setattr("app.recommender.BATCH", 2)
+    calls = []
+    rec = Recommender(PerQueryRetriever(), LLMClient([StubProvider(_batch_responder(calls))]),
+                      {d["is_number"]: d for d in DOCS})
+    outs = rec.recommend_many(["TMT bars", "PVC pipes", "Steel bars"], top_k=5)
+    assert len(calls) == 3  # 1 expansion + 2 selection batches, instead of 6 calls
+    assert [[c["is_number"] for c in o["results"]] for o in outs] == [["IS 1786"], ["IS 4985"], ["IS 432 (Part 1)"]]
+    assert [o["dropped_invalid"] for o in outs] == [1, 1, 1] and all(o["llm_used"] for o in outs)
+    # the batch results are cached for single searches too
+    assert [c["is_number"] for c in rec.recommend("PVC pipes", top_k=5)["results"]] == ["IS 4985"]
+    assert len(calls) == 3
+
+
+def test_recommend_many_failed_batch_falls_back_only_for_its_items(tmp_path, monkeypatch):
+    monkeypatch.setattr("app.validator.INVENTED_LOG", tmp_path / "log.jsonl")
+    monkeypatch.setattr("app.recommender.BATCH", 2)
+    calls = []
+    rec = Recommender(PerQueryRetriever(), LLMClient([StubProvider(_batch_responder(calls, ["Steel bars"]))]),
+                      {d["is_number"]: d for d in DOCS})
+    outs = rec.recommend_many(["TMT bars", "PVC pipes", "Steel bars"], top_k=5)
+    assert [o["llm_used"] for o in outs] == [True, True, False]
+    assert [c["is_number"] for c in outs[2]["results"]] == ["IS 1786", "IS 432 (Part 1)"]  # retrieval order
+    assert all(c["reason"] is None for c in outs[2]["results"])
