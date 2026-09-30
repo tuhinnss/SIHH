@@ -119,6 +119,13 @@ def test_max_items_truncation():
     rec = Recommender(Retr(), LLMClient([]), {"IS 100": {"is_number": "IS 100", "title": "W", "year": 1, "source_url": "u"}})
     out = analyze_pdf(pdf, "t.pdf", rec, Linter(cat(), cert()), max_items=3)
     assert out["truncated"] and len(out["items"]) == 3 and out["total_items_found"] == 7
+    assert out["next_offset"] == 3
+    # next pages continue the numbering; the last page has no next_offset
+    page2 = analyze_pdf(pdf, "t.pdf", rec, Linter(cat(), cert()), max_items=3, offset=3)
+    assert [it["index"] for it in page2["items"]] == [4, 5, 6] and page2["next_offset"] == 6
+    last = analyze_pdf(pdf, "t.pdf", rec, Linter(cat(), cert()), max_items=3, offset=6)
+    assert [it["index"] for it in last["items"]] == [7] and not last["truncated"] and last["next_offset"] is None
+    assert "item number 7" in last["items"][0]["text"]
 
 
 def test_short_numbers_do_not_match_prefixed_standards():

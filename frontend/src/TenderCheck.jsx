@@ -22,19 +22,32 @@ const chip = { red: "bg-red-100 text-red-800 border-red-300", amber: "bg-amber-1
 
 export default function TenderCheck() {
   const [res, setRes] = useState(null);
+  const [file, setFile] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
 
-  async function upload(file) {
-    if (!file) return;
-    setBusy(true); setError(null); setRes(null);
+  async function analyse(f, offset = 0) {
+    const fd = new FormData();
+    fd.append("file", f);
+    const r = await fetch(`/api/analyze-tender?offset=${offset}`, { method: "POST", body: fd });
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || `API ${r.status}`);
+    return r.json();
+  }
+
+  async function upload(f) {
+    if (!f) return;
+    setBusy(true); setError(null); setRes(null); setFile(f);
+    try { setRes(await analyse(f)); } catch (e) { setError(e.message); } finally { setBusy(false); }
+  }
+
+  async function loadMore() {
+    setLoadingMore(true); setError(null);
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const r = await fetch("/api/analyze-tender", { method: "POST", body: fd });
-      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || `API ${r.status}`);
-      setRes(await r.json());
-    } catch (e) { setError(e.message); } finally { setBusy(false); }
+      const next = await analyse(file, res.next_offset);
+      setRes((prev) => ({ ...next, items: [...prev.items, ...next.items],
+        summary: { red: prev.summary.red + next.summary.red, amber: prev.summary.amber + next.summary.amber } }));
+    } catch (e) { setError(e.message); } finally { setLoadingMore(false); }
   }
 
   function exportReport() {
@@ -60,7 +73,14 @@ export default function TenderCheck() {
             <span className={`text-xs border rounded px-2 py-0.5 ${chip.amber}`}>{res.summary.amber} amber</span>
             <button onClick={exportReport} className="ml-auto bg-navy text-white text-sm px-4 py-1.5 rounded hover:bg-blue-900">Export audit report</button>
           </div>
-          {res.truncated && <p className="text-sm bg-amber-50 border border-amber-300 rounded px-3 py-2 mb-3">Showing the first {res.items.length} of {res.total_items_found} items found.</p>}
+          {res.truncated && (
+            <div className="flex flex-wrap items-center gap-3 text-sm bg-amber-50 border border-amber-300 rounded px-3 py-2 mb-3">
+              <span>Showing the first {res.items.length} of {res.total_items_found} items found.</span>
+              <button onClick={loadMore} disabled={loadingMore}
+                className="border border-navy text-navy rounded px-3 py-0.5 hover:bg-navy hover:text-white disabled:opacity-60">
+                {loadingMore ? "Analysing…" : `Analyse items ${res.next_offset + 1}–${Math.min(2 * res.next_offset - res.offset, res.total_items_found)}`}
+              </button>
+            </div>)}
           <div className="overflow-x-auto bg-white border border-slate-200 rounded-lg">
             <table className="w-full text-sm">
               <thead className="bg-navy text-white text-left"><tr><th className="p-2 w-8">#</th><th className="p-2">Line item</th><th className="p-2">Suggested standards</th><th className="p-2">Linter flags</th></tr></thead>
