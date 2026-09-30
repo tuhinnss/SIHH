@@ -20,11 +20,11 @@ Recommends applicable Indian Standards for procurement specs; Tender Linter for 
 ## Commands (run from `backend/`; scripts are modules: `python -m ...`)
 ```bash
 pip install -r requirements.txt        # CPU torch: pip install torch --index-url https://download.pytorch.org/whl/cpu
-python -m pytest tests                 # 72 tests, LLM stubbed (also run by CI: .github/workflows/ci.yml)
+python -m pytest tests                 # 73 tests, LLM stubbed (also run by CI: .github/workflows/ci.yml)
 python -m data_pipeline.fetch_catalogue    # ~2 s from committed catalogue.jsonl -> data/specsure.sqlite (WIPES edges/snippets)
                                            # --refresh re-downloads the archive listing (~2 min, rewrites catalogue.jsonl)
 python -m data_pipeline.build_edges        # re-run after fetch_catalogue (reads data/refs_extracted.jsonl)
-python -m data_pipeline.build_index        # ~15-60 min first time (CPU); later runs re-embed only changed docs
+python -m data_pipeline.build_index        # ~15-75 min first time (CPU); later runs re-embed only changed docs
 uvicorn app.main:app --port 8000
 cd ../frontend && npm install && npm run dev   # :5173, proxies /api -> :8000
 python -m eval.from_tenders tenders/*.pdf  # real tenders -> eval/tender_rows.jsonl (gold = cited IS; user reviews)
