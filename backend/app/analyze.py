@@ -11,7 +11,10 @@ MAX_ITEMS = 40
 def analyze_pdf(pdf_bytes: bytes, filename: str, rec: Recommender, linter, max_items: int = MAX_ITEMS,
                 offset: int = 0) -> dict:
     """Analyses items[offset:offset + max_items]; `next_offset` (or None) fetches the next page."""
-    text, pages = tender.extract_text(pdf_bytes)
+    text, pages, scanned = tender.extract_text(pdf_bytes)
+    warning = (f"{scanned} of {pages} page(s) are scanned images without a text layer, so their line items "
+               "could not be read (OCR is not supported yet). Check those pages by hand or upload a "
+               "text-based PDF.") if scanned else None
     method = "heuristic"
     items = tender.split_items(text)
     if len(items) < 2 and rec.llm and rec.llm.providers:
@@ -38,7 +41,8 @@ def analyze_pdf(pdf_bytes: bytes, filename: str, rec: Recommender, linter, max_i
     for it in out_items:
         for f in it["flags"]:
             counts[f["severity"]] += 1
-    return {"filename": filename, "pages": pages, "split_method": method, "truncated": truncated,
+    return {"filename": filename, "pages": pages, "scanned_pages": scanned, "warning": warning,
+            "split_method": method, "truncated": truncated,
             "total_items_found": len(items), "offset": offset, "next_offset": end if truncated else None,
             "items": out_items, "summary": counts,
             "disclaimer": "Prototype. Checks are against an older archive catalogue; verify on BIS "
