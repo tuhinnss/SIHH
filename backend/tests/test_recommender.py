@@ -96,6 +96,31 @@ def test_llm_down_falls_back_to_retrieval():
     assert all(r["reason"] is None for r in out["results"])
 
 
+def test_repeated_query_is_served_from_cache(tmp_path, monkeypatch):
+    monkeypatch.setattr("app.validator.INVENTED_LOG", tmp_path / "log.jsonl")
+    calls = []
+    rec, retr = make(lambda p, s: calls.append(1) or _respond(p, s))
+    first = rec.recommend("TMT steel bars for RCC")
+    first["results"].clear()  # callers mutating a result must not corrupt the cache
+    again = rec.recommend(" TMT steel bars for RCC ")
+    assert len(calls) == 2 and len(retr.calls) == 1  # no new LLM or retrieval work
+    assert [r["is_number"] for r in again["results"]] == ["IS 1786", "IS 432 (Part 1)"]
+
+
+def test_fallback_is_not_cached_so_llm_is_retried(tmp_path, monkeypatch):
+    monkeypatch.setattr("app.validator.INVENTED_LOG", tmp_path / "log.jsonl")
+    state = {"down": True}
+
+    def flaky(prompt, schema):
+        if state["down"]:
+            raise RuntimeError("quota")
+        return _respond(prompt, schema)
+    rec, _ = make(flaky)
+    assert not rec.recommend("TMT steel bars for RCC")["llm_used"]
+    state["down"] = False
+    assert rec.recommend("TMT steel bars for RCC")["llm_used"]
+
+
 def test_no_providers_falls_back():
     r = FakeRetriever()
     out = Recommender(r, LLMClient([]), {d["is_number"]: d for d in DOCS}).recommend("x")
