@@ -102,7 +102,7 @@ providers' current free-tier names. A Docker setup is not included. GitHub Actio
 ## API
 | Endpoint | Purpose |
 |---|---|
-| `GET /health` | liveness |
+| `GET /health` | liveness + `search_model_ready` (the embedding model loads in the background for ~15-40 s after startup) |
 | `POST /recommend {text, lang?, top_k=10}` | ranked cards: `is_number,title,year,relevance,reason,confidence,supersedes_info,allied[],certification,source_url,clause` (+ headers `X-LLM-Used`, `X-Detected-Lang`) |
 | `POST /analyze-tender?offset=0` (multipart PDF) | line items + recommendations + linter flags, 40 items per call; `next_offset` (or `null`) requests the next page |
 | `GET /standard/{is_number}` | details, editions, scope extract, allied list, graph nodes/links |
