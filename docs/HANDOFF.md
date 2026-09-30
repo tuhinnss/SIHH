@@ -12,6 +12,16 @@ real tender PDFs) and a misses list in `run_eval`. Two bugs found while verifyin
 (every `/api` call 502), and IS 1786 had fallen out of the "TMT steel bars" candidate pool (BM25 length penalty on docs
 with scope snippets; BM25 is now title-only). All §5 sanity checks pass on the local machine.
 
+**Session 2, speed pass** (measured with keys on the local 12-core CPU):
+| | before | after |
+|---|---|---|
+| first search after startup | ~50 s (model loaded lazily) | ~4.6 s (warm-up thread at startup; model ready ~13 s after launch) |
+| a search | ~7.3 s (retrieval 1.6 s + 2 LLM calls) | ~4–6 s (retrieval 0.2 s: one batched encode) |
+| repeated search | ~7 s | ~0.003 s (LRU cache, 256 queries) |
+| sample tender, 6 items | 12 LLM calls, ~50 s | 3 calls, ~13–15 s (same primaries, same 1 red + 4 amber) |
+| 40-item tender page | 80 calls (~4–5 min, rate-limit risk) | 10 calls, ~75 s, all 40 AI-ranked |
+Gemini latency varies a lot (the same batched sample tender once took 49 s); the client retries 5xx silently.
+
 ## 1. Where things stand
 All five planned phases are built and were verified in a real browser and against live Gemini/Groq:
 
@@ -19,11 +29,11 @@ All five planned phases are built and were verified in a real browser and agains
 |---|---|
 | Catalogue | 22,025 records from Internet Archive `gov.in.is.*` → 19,700 searchable standards (latest edition per key). Older snapshot (only ~3,200 records from 2015+). |
 | Retrieval | BM25 (bm25s) over `IS number: title` + bge-m3 dense over title (+ scope snippet), RRF fusion, top-50 pool, optional bge-reranker (off by default; did not help on TMT test) |
-| LLM | Query expansion/translation → enum-constrained selection → validator → reason grounding → clause built from catalogue fields. Gemini → Groq failover, 60 s cooldown on HTTP 429. Falls back to retrieval-only (`X-LLM-Used: false`) |
+| LLM | Query expansion/translation → enum-constrained selection → validator → reason grounding → clause built from catalogue fields. Gemini → Groq failover, 60 s cooldown on HTTP 429. Falls back to retrieval-only (`X-LLM-Used: false`). Results are LRU-cached (fallbacks are not, while an LLM is configured). Tenders use `recommend_many`: 1 expansion call per 20 items + 1 selection call per 5 items (30 candidates each), validated per item |
 | Relations | 298/300 subset standards extracted (steel/cement, cables/electrical, pipes/plumbing) → 1,300 edges (909 normative_ref, 195 test_method, 47 terminology, 65 scope_ref, 84 supersedes); 248 scope snippets. 81% of extracted refs resolve to the catalogue. `same_series` is derived at query time. |
 | Tender Check | PyMuPDF → line items (numbered/BOQ/bullets; LLM split only if <2 items) → recommend per item (40 per request; `?offset=` + "Analyse items 41–80" button for more) → linter (superseded🔴, no_certification🔴, not_in_catalogue🟠, older_edition🟠, brand_name🟠) → printable audit report. Image-only (scanned) pages are counted and reported in `warning`; no OCR |
 | Frontend | React+Vite+Tailwind: Search, Tender Check, Standard (react-force-graph-2d), About |
-| Tests | 73 pytest tests (parsers, citations incl. strip_citations, eval row harvesting, index texts, validator, reason grounding, recommender with stub LLM, linter, tender/PDF incl. paging and scans, certification check, metrics); CI runs them plus the frontend build (`.github/workflows/ci.yml`) |
+| Tests | 78 pytest tests (parsers, citations incl. strip_citations, eval row harvesting, index texts, batched dense ranking, validator, reason grounding, recommender with stub LLM incl. cache and tender batching, linter, tender/PDF incl. paging and scans, certification check, metrics); CI runs them plus the frontend build (`.github/workflows/ci.yml`) |
 | Eval | `backend/eval` harness works (BM25/dense/hybrid/hybrid+rerank+LLM; invented-IS count must be 0) but `eval_set.jsonl` has **no gold rows** → no accuracy numbers exist yet |
 | Certification | `data/certification.csv` is an empty template on purpose |
 
@@ -73,6 +83,12 @@ All five planned phases are built and were verified in a real browser and agains
   with Gemini's expansion → outside the pool). `build_index.bm25_text` is number + title; `doc_text` (dense) adds the
   snippet. With 1 query + 6 expansion terms RRF fuses 14 lists, so a doc strong in only 2 lists is easily diluted —
   worth tuning (k, per-list weights) once real gold data exists.
+* **Batched selection enum = union of the batch's candidates**, so the schema alone cannot stop an item picking another
+  item's standard; `Recommender._cards` validates each item against its OWN candidates (tested). Keep that if you
+  change batching. Selection batches run sequentially on purpose: parallel calls would likely trip free-tier rate
+  limits (untested), and a 429 on Gemini fails over to Groq, whose token limit is small for ~14k-char batch prompts.
+* **Model load:** `Retriever.model` tries `local_files_only=True` first (skips a ~10 s Hugging Face online check);
+  importing torch/transformers alone takes 12–22 s on this Windows machine.
 * **Frontend proxy targets `127.0.0.1:8000`, not `localhost`:** Node 17+ resolves localhost to `::1` first, uvicorn
   listens on IPv4 only → `ECONNREFUSED ::1:8000` and 502 on every `/api` call (seen on Windows).
 * **LLM models:** defaults `gemini-flash-lite-latest` and Groq `openai/gpt-oss-120b`; both overridable
@@ -102,7 +118,7 @@ All five planned phases are built and were verified in a real browser and agains
 ## 5. Sanity checks after setting up a new machine
 All four passed on the local Windows machine on 2026-09-30 (plus Hindi/Hinglish PVC queries → IS 4985 primary, a
 scanned PDF → warning, a 45-item tender → 40 + "Analyse items 41–45").
-1. `python -m pytest tests` → 73 passed.
+1. `python -m pytest tests` → 78 passed.
 2. `curl -X POST localhost:8000/recommend -H 'content-type: application/json' -d '{"text":"TMT steel bars for RCC"}'` →
    with keys: IS 1786 primary and header `X-LLM-Used: true`; without keys: retrieval-only.
 3. Frontend Tender Check with `docs/sample_tender.pdf` → 1 red (IS 445 superseded by IS 444), 4 amber.
