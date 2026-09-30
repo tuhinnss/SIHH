@@ -1,4 +1,4 @@
-# SpecSure (SIH26108, Team "Ding Ding") — agent guide
+# Kalamkaar (SIH26108, Team "Ding Ding") — agent guide
 
 Recommends applicable Indian Standards for procurement specs; Tender Linter for tender PDFs.
 **Read `docs/HANDOFF.md` first** for current state, decisions, gotchas and the prioritised to-do list.
@@ -21,7 +21,7 @@ Recommends applicable Indian Standards for procurement specs; Tender Linter for 
 ```bash
 pip install -r requirements.txt        # CPU torch: pip install torch --index-url https://download.pytorch.org/whl/cpu
 python -m pytest tests                 # 91 tests, LLM stubbed (also run by CI: .github/workflows/ci.yml)
-python -m data_pipeline.fetch_catalogue    # ~2 s from committed catalogue.jsonl -> data/specsure.sqlite (WIPES edges/snippets)
+python -m data_pipeline.fetch_catalogue    # ~2 s from committed catalogue.jsonl -> data/kalamkaar.sqlite (WIPES edges/snippets)
                                            # --refresh re-downloads the archive listing (~2 min, rewrites catalogue.jsonl)
 python -m data_pipeline.build_edges        # re-run after fetch_catalogue (reads data/refs_extracted.jsonl)
 python -m data_pipeline.build_index        # ~15-75 min first time (CPU); later runs re-embed only changed docs
@@ -31,7 +31,7 @@ python -m eval.from_tenders tenders/*.pdf  # real tenders -> eval/tender_rows.js
 python -m eval.run_eval [--file ...]       # needs gold rows; lists the full pipeline's misses
 python -m data_pipeline.check_certification
 ```
-Data (`data/specsure.sqlite`, `data/indexes/`) is NOT in git; a fresh clone must rebuild in the order above
+Data (`data/kalamkaar.sqlite`, `data/indexes/`) is NOT in git; a fresh clone must rebuild in the order above
 (`fetch_catalogue` → `build_edges` → `build_index`). `refs_extracted.jsonl` and `subset_ids.json` ARE committed,
 so `extract_refs` (20–60 min) is only needed to grow the subset.
 

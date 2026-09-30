@@ -38,7 +38,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="SpecSure API", lifespan=lifespan)
+app = FastAPI(title="Kalamkaar API", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"],
                    expose_headers=["X-LLM-Used", "X-Detected-Lang", "X-English-Query"])
 

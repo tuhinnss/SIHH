@@ -56,7 +56,7 @@ export default function App() {
     <div className="min-h-screen flex flex-col">
       <header className="bg-navy text-white border-b-4 border-accent">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-baseline gap-3">
-          <h1 className="text-2xl font-bold">SpecSure</h1>
+          <h1 className="text-2xl font-bold">Kalamkaar</h1>
           <span className="text-sm text-blue-100">Indian Standards recommender for procurement specifications</span>
         </div>
         <nav className="max-w-4xl mx-auto px-4 flex gap-1 text-sm">

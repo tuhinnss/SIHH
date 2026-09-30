@@ -1,4 +1,4 @@
-# SpecSure — handoff for the next agent
+# Kalamkaar — handoff for the next agent
 
 Written at the end of the cloud session that built Phases 1–5 (last commit at time of writing: `136961c`),
 updated after session 2 (2026-09-30, the user's local Windows machine; branch `local-setup`).
@@ -135,6 +135,8 @@ All five planned phases are built and were verified in a real browser and agains
   bge-reranker-v2-m3 (~2 GB) on first use; it has not been downloaded on this machine yet.
 * **Agent tooling:** the Bash tool collapses `\\n` inside inline heredoc scripts into a real newline — write Python
   helpers to a file when a string literal must contain `\n`.
+* **Renamed SpecSure → Kalamkaar** (end of session 2): the SQLite file is now `data/kalamkaar.sqlite`. An existing
+  local build must rename `data/specsure.sqlite` to it (or rerun `fetch_catalogue` + `build_edges`).
 * **Keys** go in the git-ignored `.env` (`config.py` loads `ROOT/.env`); keep the tracked `.env.example` blank.
 
 ## 4. Key files

@@ -12,7 +12,7 @@ from app.models import StandardRow
 from data_pipeline.common import RAW, ROOT
 from data_pipeline.parsing import parse_item, to_dict
 
-DB = ROOT / "data" / "specsure.sqlite"
+DB = ROOT / "data" / "kalamkaar.sqlite"
 CATALOGUE = ROOT / "data" / "catalogue.jsonl"
 META = ROOT / "data" / "catalogue_meta.json"
 

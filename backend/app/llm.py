@@ -13,7 +13,7 @@ import requests
 
 from app import config
 
-log = logging.getLogger("specsure.llm")
+log = logging.getLogger("kalamkaar.llm")
 
 
 class LLMUnavailable(Exception):

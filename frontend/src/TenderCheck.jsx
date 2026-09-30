@@ -7,11 +7,11 @@ function auditHtml(r) {
     <tr><td>${it.index}</td><td>${esc(it.text)}</td>
     <td>${it.recommendations.map((c) => `<div><b>${esc(c.is_number)}</b> (${esc(c.year ?? "?")}) ${esc(c.title)}</div>`).join("") || "—"}</td>
     <td>${it.flags.map((f) => `<div class="${f.severity}">${f.severity.toUpperCase()}: ${esc(f.message)}</div>`).join("") || "No issues found"}</td></tr>`).join("");
-  return `<!doctype html><html><head><meta charset="utf-8"><title>SpecSure audit — ${esc(r.filename)}</title>
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Kalamkaar audit — ${esc(r.filename)}</title>
   <style>body{font-family:sans-serif;font-size:12px;margin:24px}h1{color:#1f4a86}table{border-collapse:collapse;width:100%}
   td,th{border:1px solid #999;padding:6px;vertical-align:top}th{background:#1f4a86;color:#fff}.red{color:#b00020}.amber{color:#a35a00}
   .note{background:#fff8d6;border:1px solid #ffc601;padding:8px;margin:12px 0}</style></head><body>
-  <h1>SpecSure — Tender audit report</h1>
+  <h1>Kalamkaar — Tender audit report</h1>
   <p><b>File:</b> ${esc(r.filename)} · ${r.pages} page(s) · ${r.items.length} item(s) analysed${r.truncated ? ` of ${r.total_items_found}` : ""} · <b>${r.summary.red}</b> red / <b>${r.summary.amber}</b> amber flags · generated ${new Date().toLocaleString()}</p>
   <div class="note">${esc(r.disclaimer)}</div>${r.warning ? `<div class="note red">${esc(r.warning)}</div>` : ""}
   <table><tr><th>#</th><th>Line item</th><th>Suggested standards (per our catalogue)</th><th>Linter findings</th></tr>${rows}</table>
