@@ -1,8 +1,10 @@
 """For each standard in data/subset_ids.json: metadata -> OCR text -> scope snippet, referred
 standards, supersession. Raw text is held in memory only and discarded (never written to disk).
-Results: data/refs_extracted.jsonl (resumable; metadata-only, no standard texts)."""
+Results: data/refs_extracted.jsonl (resumable; metadata-only, no standard texts).
+--retry-failed re-attempts standards whose download failed earlier."""
 import json
 import re
+import sys
 import urllib.parse
 
 from tqdm import tqdm
@@ -47,11 +49,16 @@ def process(identifier: str) -> dict:
     return rec
 
 
-def main() -> None:
+def main(retry_failed: bool = False) -> None:
     ids = [x["identifier"] for x in json.loads(SUBSET.read_text(encoding="utf-8"))]
     done = set()
     if OUT.exists():
-        done = {json.loads(l)["identifier"] for l in open(OUT, encoding="utf-8")}
+        rows = [json.loads(l) for l in open(OUT, encoding="utf-8")]
+        if retry_failed:  # forget failed downloads so they are attempted again
+            rows = [r for r in rows if r.get("ok")]
+            with open(OUT, "w", encoding="utf-8", newline="\n") as f:
+                f.writelines(json.dumps(r, ensure_ascii=False) + "\n" for r in rows)
+        done = {r["identifier"] for r in rows}
     todo = [i for i in ids if i not in done]
     print(f"{len(done)} done, {len(todo)} to go")
     with open(OUT, "a", encoding="utf-8", newline="\n") as f:
@@ -65,4 +72,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    main(retry_failed="--retry-failed" in sys.argv)
