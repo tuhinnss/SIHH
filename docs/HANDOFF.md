@@ -1,8 +1,14 @@
 # SpecSure — handoff for the next agent
 
-Written at the end of the cloud session that built Phases 1–5 (last commit at time of writing: `136961c`).
+Written at the end of the cloud session that built Phases 1–5 (last commit at time of writing: `136961c`),
+updated after session 2 (2026-09-30, the user's local Windows machine; branch `local-setup`).
 Product: SIH 2026 problem SIH26108 (Ministry of Consumer Affairs / BIS) — recommend applicable Indian
 Standards for procurement specs; lint tenders. Read `CLAUDE.md` for the hard rules.
+
+**Session 2 changes:** Windows port (explicit UTF-8 everywhere), `fetch_catalogue` builds from the committed
+snapshot (`--refresh` to re-download), LLM reason grounding (to-do #5), Tender Check paging beyond 40 items and a
+warning for scanned pages, `extract_refs --retry-failed`, GitHub Actions CI, `eval.from_tenders` (eval rows from
+real tender PDFs) and a misses list in `run_eval`.
 
 ## 1. Where things stand
 All five planned phases are built and were verified in a real browser and against live Gemini/Groq:
@@ -11,31 +17,38 @@ All five planned phases are built and were verified in a real browser and agains
 |---|---|
 | Catalogue | 22,025 records from Internet Archive `gov.in.is.*` → 19,700 searchable standards (latest edition per key). Older snapshot (only ~3,200 records from 2015+). |
 | Retrieval | BM25 (bm25s) + bge-m3 dense, RRF fusion, top-50 pool, optional bge-reranker (off by default; did not help on TMT test) |
-| LLM | Query expansion/translation → enum-constrained selection → validator → clause built from catalogue fields. Gemini → Groq failover, 60 s cooldown on HTTP 429. Falls back to retrieval-only (`X-LLM-Used: false`) |
+| LLM | Query expansion/translation → enum-constrained selection → validator → reason grounding → clause built from catalogue fields. Gemini → Groq failover, 60 s cooldown on HTTP 429. Falls back to retrieval-only (`X-LLM-Used: false`) |
 | Relations | 298/300 subset standards extracted (steel/cement, cables/electrical, pipes/plumbing) → 1,300 edges (909 normative_ref, 195 test_method, 47 terminology, 65 scope_ref, 84 supersedes); 248 scope snippets. 81% of extracted refs resolve to the catalogue. `same_series` is derived at query time. |
-| Tender Check | PyMuPDF → line items (numbered/BOQ/bullets; LLM split only if <2 items) → recommend per item (max 40) → linter (superseded🔴, no_certification🔴, not_in_catalogue🟠, older_edition🟠, brand_name🟠) → printable audit report |
+| Tender Check | PyMuPDF → line items (numbered/BOQ/bullets; LLM split only if <2 items) → recommend per item (40 per request; `?offset=` + "Analyse items 41–80" button for more) → linter (superseded🔴, no_certification🔴, not_in_catalogue🟠, older_edition🟠, brand_name🟠) → printable audit report. Image-only (scanned) pages are counted and reported in `warning`; no OCR |
 | Frontend | React+Vite+Tailwind: Search, Tender Check, Standard (react-force-graph-2d), About |
-| Tests | 61 pytest tests (parsers, citations, validator, recommender with stub LLM, linter, tender/PDF, certification check, metrics) |
+| Tests | 72 pytest tests (parsers, citations incl. strip_citations, eval row harvesting, validator, reason grounding, recommender with stub LLM, linter, tender/PDF incl. paging and scans, certification check, metrics); CI runs them plus the frontend build (`.github/workflows/ci.yml`) |
 | Eval | `backend/eval` harness works (BM25/dense/hybrid/hybrid+rerank+LLM; invented-IS count must be 0) but `eval_set.jsonl` has **no gold rows** → no accuracy numbers exist yet |
 | Certification | `data/certification.csv` is an empty template on purpose |
 
 ## 2. Prioritised to-do (highest value first)
 1. **Real evaluation.** Ask the user for (or help them collect) 30–100 real GeM/CPPP tender lines with the IS
-   numbers they cite; fill `backend/eval/eval_set.jsonl` (`{query, gold_is:[...], lang}`); run `python -m eval.run_eval`;
+   numbers they cite. Easiest path: real tender PDFs → `python -m eval.from_tenders *.pdf` (query = item text minus
+   citations, gold = what the tender cited) → user reviews `eval/tender_rows.jsonl` → `python -m eval.run_eval --file
+   eval/tender_rows.jsonl`, which also lists the full pipeline's misses. Or fill `backend/eval/eval_set.jsonl` by hand;
    analyse failures by category (abbreviation gaps like "TMT", multi-part standards, Hindi). Never invent gold rows.
 2. **Certification table** — the user fills `data/certification.csv` by hand; you only run
    `python -m data_pipeline.check_certification` and verify the badge/`no_certification` flag end to end
    (currently only unit-tested with fake rows).
 3. **Grow relation coverage** beyond the 300-standard subset: edit `VERTICALS`/`PER_VERTICAL` in
    `data_pipeline/select_subset.py` (or add verticals), rerun `extract_refs` (resumable; ~3–20 s/standard at 1 req/s),
-   then `build_edges` and `build_index`. Two standards keep returning HTTP errors on download — retry later.
+   then `build_edges` and `build_index`. Ask the user which procurement categories matter for the demo first
+   (naive title regexes are noisy: "fans" matches fuel-pump titles). Two standards (`gov.in.is.9550.2001`,
+   `gov.in.is.17482.2020`) fail because archive.org answers HTTP 500 for their OCR files (re-checked 2026-09-30);
+   retry later with `extract_refs --retry-failed`.
 4. **Retrieval quality:** try adding scope snippets for more standards, query-side abbreviations via the LLM
    expansion (already helps), tune RRF/pool sizes against the eval set, re-test `RERANK` with real gold data.
-5. **LLM reason grounding:** small models sometimes over-claim in the one-line reason. Options: shorten reasons to
-   title-derived phrases, add a cheap grounding check, or drop reason text when it mentions facts not in the title.
-6. **Tender robustness:** scanned/image PDFs need OCR (not implemented); test on real tender PDFs; consider
-   IndicTrans2 for Hindi (currently the LLM translates).
-7. Nice-to-have: Docker/compose, CI running pytest, frontend tests, pagination in Tender Check for >40 items.
+5. ~~LLM reason grounding~~ — done: `validator.ground_reason` drops a reason whose numbers or certification terms
+   are not in the candidate line (`IS number (year): title`, all the LLM sees) or the requirement. Wording-level
+   over-claims without numbers can still slip through.
+6. **Tender robustness:** scanned pages are now detected and reported, but not read — OCR still needs a decision
+   (Tesseract via PyMuPDF `get_textpage_ocr` needs a system install; RapidOCR is pip-only). Test on real tender PDFs;
+   consider IndicTrans2 for Hindi (currently the LLM translates).
+7. Nice-to-have: Docker/compose, frontend tests. (CI and Tender Check paging are done.)
 
 ## 3. Decisions and gotchas learned the hard way
 * **Archive API:** `advancedsearch` caps deep paging at 10,000 → use the Scraping API (`fetch_raw.py`). Downloads under
@@ -61,6 +74,14 @@ All five planned phases are built and were verified in a real browser and agains
   `EMBED_MODEL` invalidates everything.
 * **`fetch_catalogue` deletes and recreates the SQLite DB** (edges + scope snippets vanish) → always re-run `build_edges`.
 * Sandbox-only note: `pkill -f`/`pgrep -f` inside a command that also contains the pattern kills its own shell; use pid files.
+* **Windows (session 2):** `open()`/`read_text()` default to cp1252 → always pass `encoding="utf-8"`. The MSYS2 `python`
+  first on PATH cannot install torch; the venv uses python.org 3.12 (`backend/.venv`). git has `core.autocrlf=true`, so
+  source files are CRLF in the working tree. The Hugging Face cache warns about symlinks (harmless). On this
+  machine the first `build_index` took ~10 min to download bge-m3 (2.3 GB, hf-xet) and ~50 min to embed 19,700 docs on
+12 CPU cores (later runs re-embed only changed docs).
+* **Agent tooling:** the Bash tool collapses `\\n` inside inline heredoc scripts into a real newline — write Python
+  helpers to a file when a string literal must contain `\n`.
+* **Keys** go in the git-ignored `.env` (`config.py` loads `ROOT/.env`); keep the tracked `.env.example` blank.
 
 ## 4. Key files
 `backend/app/recommender.py` (pipeline + prompts) · `retrieval.py` · `llm.py` · `validator.py` · `linter.py` ·
@@ -68,7 +89,7 @@ All five planned phases are built and were verified in a real browser and agains
 `tender.py`/`analyze.py` (PDF) · `data_pipeline/{parsing,refs_parsing,extract_refs,build_edges,build_index,select_subset}.py`.
 
 ## 5. Sanity checks after setting up a new machine
-1. `python -m pytest tests` → 61 passed.
+1. `python -m pytest tests` → 72 passed.
 2. `curl -X POST localhost:8000/recommend -H 'content-type: application/json' -d '{"text":"TMT steel bars for RCC"}'` →
    with keys: IS 1786 primary and header `X-LLM-Used: true`; without keys: retrieval-only.
 3. Frontend Tender Check with `docs/sample_tender.pdf` → 1 red (IS 445 superseded by IS 444), 4 amber.
