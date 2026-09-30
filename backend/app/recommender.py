@@ -7,7 +7,7 @@ from app.citations import extract_citations
 from app.clause import tender_clause
 from app.lang import detect_lang
 from app.llm import LLMClient, LLMUnavailable
-from app.validator import validate_selection
+from app.validator import ground_reason, validate_selection
 
 log = logging.getLogger("specsure.recommender")
 
@@ -100,8 +100,7 @@ class Recommender:
         results: list[dict] = []
 
         if use_llm and hits:
-            cand_lines = "\n".join(
-                f"- {h['is_number']} ({h['year'] or 'year unknown'}): {h['title']}" for h in hits)
+            cand_lines = "\n".join(f"- {_line(h)}" for h in hits)
             try:
                 out = self.llm.generate_json(
                     SELECT_PROMPT.format(text=english, candidates=cand_lines, top_k=top_k),
@@ -110,8 +109,8 @@ class Recommender:
                     out.get("selected", []), set(by_num), set(self.catalogue), query=text)
                 for v in valid[:top_k]:
                     h = by_num[v["is_number"]]
-                    results.append(self._card(h, v.get("relevance", "primary"),
-                                              str(v.get("reason", "")).strip() or None,
+                    reason = ground_reason(str(v.get("reason") or "").strip(), _line(h), f"{text} {english}")
+                    results.append(self._card(h, v.get("relevance", "primary"), reason,
                                               _clamp(v.get("confidence"))))
                 llm_used = True
             except (LLMUnavailable, KeyError, ValueError, TypeError, AttributeError):
@@ -152,6 +151,11 @@ class Recommender:
             "source_url": row["source_url"],
             "clause": tender_clause(row["is_number"], row["year"], row["title"]),
         }
+
+
+def _line(h: dict) -> str:
+    """How a candidate is shown to the LLM; also the evidence its reason is grounded against."""
+    return f"{h['is_number']} ({h['year'] or 'year unknown'}): {h['title']}"
 
 
 def _clamp(x) -> float | None:
