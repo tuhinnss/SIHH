@@ -1,7 +1,10 @@
 """Recommendation pipeline: expand query -> hybrid retrieve -> LLM select (enum-constrained)
 -> validate -> attach clause. Degrades to retrieval-only when no LLM is available."""
+import copy
 import logging
 import re
+import threading
+from collections import OrderedDict
 
 from app.citations import extract_citations
 from app.clause import tender_clause
@@ -43,6 +46,7 @@ Choose up to {top_k} candidates that apply, best first.
 Skip candidates that do not apply."""
 
 POOL = 50
+CACHE_SIZE = 256  # recent queries kept in memory (LRU)
 _DEVANAGARI = re.compile(r"[ऀ-ॿ]")
 
 
@@ -72,6 +76,8 @@ class Recommender:
         self.catalogue = catalogue
         self.cert = cert
         self.graph = graph
+        self._cache: OrderedDict[tuple, dict] = OrderedDict()
+        self._cache_lock = threading.Lock()
 
     def _expand(self, text: str, lang: str = "en") -> tuple[str, list[str]]:
         if not self.llm or not self.llm.providers:
@@ -85,6 +91,22 @@ class Recommender:
             return text, []
 
     def recommend(self, text: str, top_k: int = 10, rerank: bool = False, lang: str | None = None) -> dict:
+        """Cached: a repeated query costs no LLM calls. A retrieval-only fallback is not cached while an
+        LLM is configured (the provider may be back on the next try)."""
+        key = (text.strip(), top_k, rerank, lang)
+        with self._cache_lock:
+            if key in self._cache:
+                self._cache.move_to_end(key)
+                return copy.deepcopy(self._cache[key])
+        out = self._recommend(text, top_k, rerank, lang)
+        if out["llm_used"] or not (self.llm and self.llm.providers):
+            with self._cache_lock:
+                self._cache[key] = copy.deepcopy(out)
+                if len(self._cache) > CACHE_SIZE:
+                    self._cache.popitem(last=False)
+        return out
+
+    def _recommend(self, text: str, top_k: int, rerank: bool, lang: str | None) -> dict:
         lang = lang or detect_lang(text)
         english, terms = self._expand(text, lang)
         extra = [t for t in terms]
