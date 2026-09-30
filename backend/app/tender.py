@@ -25,6 +25,37 @@ def extract_text(pdf_bytes: bytes, max_chars: int | None = MAX_CHARS) -> tuple[s
     return "\n".join(pages)[:max_chars], len(pages), image_only
 
 
+# GeM "Bid Document" PDFs: each item is a heading line followed by a "/Technical Specifications"
+# section that ends at "Consignees/Reporting Officer". Everything else is forms, T&Cs and GeM's own
+# "GeMARPTS" search suggestions (other catalogue categories with THEIR standards, not the buyer's).
+# The Hindi labels extract garbled, so only the English markers are used.
+_GEM_ID = re.compile(r"GEM/\d{4}/B/\d+")
+_GEM_SPEC = re.compile(r"/\s*Technical Specifications\s*$", re.I)
+_GEM_END = re.compile(r"Consignees/Reporting Officer", re.I)
+_GEM_BOILER = re.compile(  # link-table cells come out as separate lines ("Specification Document", "View File")
+    r"^(?:Specification Document|BOQ Detail Document|View File)(?:\s+View File)?$|^Advisory-Please refer", re.I)
+
+
+def gem_items(text: str) -> list[str]:
+    """Line items of a GeM bid document ([] if the text is not one): the item heading plus any
+    specification text listed under it."""
+    if not _GEM_ID.search(text):
+        return []
+    lines = [l.strip() for l in text.splitlines() if l.strip() and not _NOISE.match(l)]
+    items = []
+    for i, line in enumerate(lines):
+        if not _GEM_SPEC.search(line) or i == 0:
+            continue
+        spec = []
+        for nxt in lines[i + 1:]:
+            if _GEM_END.search(nxt) or _GEM_SPEC.search(nxt):
+                break
+            if not _GEM_BOILER.search(nxt):
+                spec.append(nxt)
+        items.append(re.sub(r"\s+", " ", " ".join([lines[i - 1], *spec])).strip())
+    return items
+
+
 def split_items(text: str) -> list[str]:
     items: list[list[str]] = []
     lines = [l.rstrip() for l in text.splitlines() if l.strip() and not _NOISE.match(l)]
