@@ -31,6 +31,14 @@ Mild gadget bars
 IS 400
 : 1988 Specification for PVC gadgets
 \xa0
+3.
+IS 500 (Part 2/Sec 3)
+Safety of widgets - irons
+\xa0
+4.
+IS 600 (Part
+1 & 2) Self ballasted widgets
+\xa0
 """
 
 
@@ -38,7 +46,9 @@ def test_parse_rows_handles_wrapped_numbers_and_skips_order_column():
     rows = parse_rows(PAGE)
     assert [(r["key"], r["product"]) for r in rows] == [
         ("IS-100", "Widgets for water supply"), ("IS-200-P1", "Gadgets-Part1 fly-ash based"),
-        ("IS-300-P2", "Mild gadget bars"), ("IS-400", "Specification for PVC gadgets")]
+        ("IS-300-P2", "Mild gadget bars"), ("IS-400", "Specification for PVC gadgets"),
+        ("IS-500-P2-S3", "Safety of widgets - irons"),
+        ("IS-600-P1", "Self ballasted widgets"), ("IS-600-P2", "Self ballasted widgets")]
 
 
 def test_norm_is():

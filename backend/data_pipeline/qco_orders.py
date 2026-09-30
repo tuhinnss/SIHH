@@ -41,10 +41,13 @@ _DATE_NUM = re.compile(r"\b(\d{1,2})[./-](\d{1,2})[./-]((?:19|20)\d{2})\b")
 
 
 def norm_is(head: str) -> str:
-    """'IS 432 : Part 1:1982' -> 'IS 432 (Part 1) : 1982' so the citation parser reads the part."""
+    """'IS 432 : Part 1:1982' -> 'IS 432 (Part 1):1982' so the citation parser reads the part. Already
+    bracketed forms ('IS 1489 (Part 1)', 'IS 302 (Part 2/Sec 3)') are left alone."""
     s = re.sub(r"\s+", " ", head).strip()
-    s = re.sub(r"[:\s]*\(?\s*\bPart\s*(\w+)\s*\)?", r" (Part \1)", s, flags=re.I)
-    s = re.sub(r"[:\s]*\(?\s*\bSec(?:tion)?\.?\s*(\w+)\s*\)?", r" (Sec \1)", s, flags=re.I)
+    if not re.search(r"\(\s*Part", s, re.I):
+        s = re.sub(r"[:\s]*\bPart\s*(\w+)\s*\)?", r" (Part \1)", s, flags=re.I)
+    if not re.search(r"[(/]\s*Sec", s, re.I):
+        s = re.sub(r"[:\s]*\(?\s*\bSec(?:tion)?\.?\s*(\w+)\s*\)?", r" (Sec \1)", s, flags=re.I)
     return s
 
 
@@ -63,11 +66,19 @@ def parse_rows(text: str) -> list[dict]:
         while j < len(lines) and lines[j] and not _SERIAL.match(lines[j]):
             prod.append(lines[j])
             j += 1
-        cites = extract_citations(norm_is(" ".join(head)))
-        if cites:
-            product = re.sub(r"\s+", " ", " ".join(prod)).strip(" .")
-            rows.append({"key": cites[0].key, "is_raw": norm_is(" ".join(head)),
-                         "product": re.sub(r"^[:\s]*(?:19|20)\d{2}\s*", "", product)})  # wrapped year
+        h = " ".join(head)
+        if prod and h.count("(") > h.count(")") and (m := re.match(r"^([\d\s&,]+\))\s*(.*)$", prod[0])):
+            h, prod[0] = f"{h} {m.group(1)}", m.group(2)  # "IS 15111 (Part" / "1 & 2) Self Ballasted ..."
+        h = norm_is(h)
+        product = re.sub(r"^[:\s]*(?:19|20)\d{2}\s*", "", re.sub(r"\s+", " ", " ".join(prod)).strip(" ."))  # wrapped year
+        if both := re.match(r"^(.*?)\(\s*Part\s*(\w+)\s*&\s*(\w+)\s*\)", h, re.I):  # one row, two parts
+            heads = [f"{both.group(1)}(Part {both.group(2)})", f"{both.group(1)}(Part {both.group(3)})"]
+        else:
+            heads = [h]
+        for hh in heads:
+            cites = extract_citations(hh)
+            if cites:
+                rows.append({"key": cites[0].key, "is_raw": hh.strip(), "product": product})
     return rows
 
 
