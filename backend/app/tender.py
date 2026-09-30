@@ -25,15 +25,28 @@ def extract_text(pdf_bytes: bytes, max_chars: int | None = MAX_CHARS) -> tuple[s
     return "\n".join(pages)[:max_chars], len(pages), image_only
 
 
-# GeM "Bid Document" PDFs: each item is a heading line followed by a "/Technical Specifications"
+# GeM "Bid Document" PDFs: each item is a heading followed by a "Technical Specifications" marker and a
 # section that ends at "Consignees/Reporting Officer". Everything else is forms, T&Cs and GeM's own
 # "GeMARPTS" search suggestions (other catalogue categories with THEIR standards, not the buyer's).
+# Two layouts: BOQ bids ("<hindi> /Technical Specifications", specs in attached files) and category bids
+# ("Technical Specifications/<hindi>", a parameter table; the heading can wrap and ends "( 40 pieces )").
 # The Hindi labels extract garbled, so only the English markers are used.
 _GEM_ID = re.compile(r"GEM/\d{4}/B/\d+")
-_GEM_SPEC = re.compile(r"/\s*Technical Specifications\s*$", re.I)
+_GEM_SPEC = re.compile(r"(?:^|/)\s*Technical Specifications\s*(?:/|$)", re.I)
 _GEM_END = re.compile(r"Consignees/Reporting Officer", re.I)
 _GEM_BOILER = re.compile(  # link-table cells come out as separate lines ("Specification Document", "View File")
-    r"^(?:Specification Document|BOQ Detail Document|View File)(?:\s+View File)?$|^Advisory-Please refer", re.I)
+    r"^(?:Specification Document|BOQ Detail Document|View File)(?:\s+View File)?$|^Advisory-Please refer"
+    r"|^Specification$|^Specification Name|^Bid Requirement|^Values\)|As per GeM Category", re.I)
+# Fields between heading and marker: the Make-in-India note ("(... Minimum 50% and 20% Local" / "Content
+# required ... Local Supplier respectively)"), "Bis Required" / "Yes".
+_GEM_NOTE = re.compile(r"Local\s*$|Local Supplier|^Content required|Minimum \d+% and \d+%|^respectively"
+                       r"|^Bis Required$|^(?:Yes|No)$", re.I)
+SPEC_CHARS = 600  # category-bid parameter tables are long; the heading carries most of the meaning
+
+
+def _open(line: str) -> bool:
+    """A heading line that continues on the next line: unbalanced '(' or a trailing '/', ',' or '-'."""
+    return line.count("(") > line.count(")") or line.endswith(("/", ",", "-"))
 
 
 def gem_items(text: str) -> list[str]:
@@ -52,7 +65,16 @@ def gem_items(text: str) -> list[str]:
                 break
             if not _GEM_BOILER.search(nxt):
                 spec.append(nxt)
-        items.append(re.sub(r"\s+", " ", " ".join([lines[i - 1], *spec])).strip())
+        h = i - 1
+        while h > 0 and _GEM_NOTE.search(lines[h]):
+            h -= 1
+        head = [lines[h]]
+        while h > 0 and _open(lines[h - 1]):  # wrapped heading
+            h -= 1
+            head.insert(0, lines[h])
+        heading = re.sub(r"\(\s*\d+\s*pieces?\s*\)|\(V\d+\)", "", " ".join(head), flags=re.I)
+        spec_text = re.sub(r"\s+", " ", " ".join(spec)).strip()[:SPEC_CHARS]
+        items.append(re.sub(r"\s+", " ", f"{heading} {spec_text}").strip())
     return items
 
 

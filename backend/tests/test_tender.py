@@ -165,12 +165,38 @@ GEM_LINES = [
     "5 15",
     "6 / 13",
     "Gadget Cable 4 Core",
+    "(hindi text /Minimum 50% and 20% Local",  # Make-in-India note between heading and marker
+    "Content required for qualifying as Class 1 and Class 2 Local Supplier respectively)",
     "xyz /Technical Specifications",
     "Conductor Copper, conforming to IS 300",
     "xyz/Consignees/Reporting Officer and Quantity",
     "1 Some Officer",
     "800 15",
 ]
+
+
+GEM_CATEGORY_LINES = [  # GeM category bid: wrapped heading, fields, parameter table
+    "Bid Number: GEM/2025/B/7654321",
+    "4. Short Duration Bid has been published by the Buyer.",
+    "Widget Luminaire For Roads (V2) Conforming To IS 300 (Part 5 /",
+    "Section 3) ( 40 pieces )",
+    "(Minimum 50% and 20% Local Content required for qualifying as Class 1 and Class 2 Local Supplier",
+    "respectively/hindi)",
+    "Bis Required",
+    "Yes",
+    "Technical Specifications/hindi",
+    "Specification",
+    "Specification Name/hindi",
+    "Bid Requirement/hindi (Allowed",
+    "Values)/hindi",
+    "Rated power 70 W",
+    "Consignees/Reporting Officer/hindi and/ Quantity",
+]
+
+
+def test_gem_category_bid_heading_wraps_and_fields_are_skipped():
+    assert tender.gem_items("\n".join(GEM_CATEGORY_LINES)) == [
+        "Widget Luminaire For Roads Conforming To IS 300 (Part 5 / Section 3) Rated power 70 W"]
 
 
 def test_gem_items_are_headings_plus_their_specs():
