@@ -28,6 +28,23 @@ class Citation:
     joint: tuple[str, ...]
 
 
+_LEAD = (r"(?:as\s+per|conform(?:s|ing)?\s+to|confirming\s+to|according\s+to|compl(?:ying|iant)\s+(?:with|to)|"
+         r"in\s+accordance\s+with|to|of|per)")
+
+
+def strip_citations(text: str) -> str:
+    """Remove IS citations and the words that only introduced them: "bars conforming to IS 1786 and
+    IS 432 (Part 1)." -> "bars." Leaves the product description (eval queries from real tenders)."""
+    s = _CITE.sub("\0", text)
+    s = re.sub(r"\0(?:\s*(?:,|/|&|\band\b|\bor\b)\s*\0)*", "\0", s)  # "IS a, IS b and IS c" -> one
+    s = re.sub(rf"\b{_LEAD}\s*[:\-]?\s*\0", "", s, flags=re.I)
+    s = s.replace("\0", "")
+    s = re.sub(r"\(\s*\)|\[\s*\]", "", s)
+    s = re.sub(r"\s+([,.;:)])", r"\1", s)
+    s = re.sub(r"[,;]+(?=[.)])", "", s)  # "Philips, as per IS x." -> "Philips."
+    return re.sub(r"\s+", " ", s).strip(" ,;:-")
+
+
 def extract_citations(text: str) -> list[Citation]:
     out, seen = [], set()
     for m in _CITE.finditer(text):
