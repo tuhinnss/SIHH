@@ -1,4 +1,4 @@
-"""Build BM25 + dense index over "IS number + title (+ scope snippet)".
+"""Build BM25 index over "IS number + title" and dense index over "IS number + title (+ scope snippet)".
 
 One retrieval document per standard key: the latest edition, preferring the plain
 English copy over Hindi/bilingual/tentative/supplement copies. Older editions stay in
@@ -18,8 +18,16 @@ from app.config import DB_PATH, EMBED_MODEL, INDEX_DIR  # noqa: E402
 from app.models import StandardRow  # noqa: E402
 
 
+def bm25_text(r: dict) -> str:
+    """BM25 sees number + title only. With the scope snippet appended, the ~250 extracted standards
+    were ~20x longer than the other title-only docs and BM25 length normalisation buried them
+    (IS 1786 fell out of the 50-candidate pool for "TMT steel bars")."""
+    return f"{r['is_number']}: {r['title']}"
+
+
 def doc_text(r: dict) -> str:
-    text = f"{r['is_number']}: {r['title']}"
+    """Dense text: the title plus the scope snippet where one was extracted."""
+    text = bm25_text(r)
     if r.get("scope_snippet"):
         text += f". {r['scope_snippet']}"
     return text
@@ -52,7 +60,7 @@ def main() -> None:
     print(f"{len(docs)} retrieval documents")
     (INDEX_DIR / "docs.json").write_text(json.dumps(docs, ensure_ascii=False), encoding="utf-8")
 
-    tok = bm25s.tokenize(texts, stopwords="en")
+    tok = bm25s.tokenize([bm25_text(d) for d in docs], stopwords="en")
     bm = bm25s.BM25()
     bm.index(tok)
     bm.save(str(INDEX_DIR / "bm25"))
