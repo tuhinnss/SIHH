@@ -28,7 +28,7 @@ def polite_get_json(url: str, params: dict | None = None, retries: int = 5) -> d
         _last = time.monotonic()
         try:
             r = requests.get(url, params=params, timeout=90,
-                             headers={"User-Agent": "SpecSure-SIH26108-prototype"})
+                             headers={"User-Agent": "Kalamkaar-SIH26108-prototype"})
             r.raise_for_status()
             data = r.json()
             if "error" in data:
@@ -54,7 +54,7 @@ def polite_get_text(url: str, retries: int = 4, max_bytes: int = 8_000_000) -> s
             time.sleep(wait)
         _last = time.monotonic()
         try:
-            r = requests.get(url, timeout=120, headers={"User-Agent": "SpecSure-SIH26108-prototype"})
+            r = requests.get(url, timeout=120, headers={"User-Agent": "Kalamkaar-SIH26108-prototype"})
             if r.status_code == 404:
                 return None
             r.raise_for_status()

@@ -7,7 +7,7 @@ import time
 
 from app.config import INVENTED_LOG
 
-log = logging.getLogger("specsure.validator")
+log = logging.getLogger("kalamkaar.validator")
 
 _NUM = re.compile(r"\d+(?:\.\d+)?")
 # certification facts come only from certification.csv, never from LLM prose

@@ -12,7 +12,7 @@ from app.lang import detect_lang
 from app.llm import LLMClient, LLMUnavailable
 from app.validator import ground_reason, validate_selection
 
-log = logging.getLogger("specsure.recommender")
+log = logging.getLogger("kalamkaar.recommender")
 
 EXPAND_SCHEMA = {
     "type": "object",

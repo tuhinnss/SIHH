@@ -4,7 +4,7 @@ from app import tender
 from app.llm import LLMUnavailable
 from app.recommender import Recommender
 
-log = logging.getLogger("specsure.analyze")
+log = logging.getLogger("kalamkaar.analyze")
 MAX_ITEMS = 40
 
 

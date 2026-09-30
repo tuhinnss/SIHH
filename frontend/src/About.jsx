@@ -26,7 +26,7 @@ export default function About() {
         <h2 className="font-semibold">Honest disclaimers</h2>
         <ul className="list-disc ml-6 text-sm mt-1 space-y-1">
           <li>The archive is an <b>older snapshot</b>; many items date from before 2015. “Latest version” means <i>as per our catalogue</i> — verify on BIS Know Your Standards.</li>
-          <li>Standard texts belong to the Bureau of Indian Standards; SpecSure links to sources and does not republish them.</li>
+          <li>Standard texts belong to the Bureau of Indian Standards; Kalamkaar links to sources and does not republish them.</li>
           <li>Relation coverage is partial (a subset of standards); a missing relation is not proof that none exists.</li>
           <li>AI suggestions are limited to catalogue candidates and validated, but a procurement officer must confirm applicability.</li>
         </ul>

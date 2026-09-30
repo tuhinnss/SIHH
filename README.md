@@ -1,4 +1,4 @@
-# SpecSure — SIH26108 (Team "Ding Ding")
+# Kalamkaar — SIH26108 (Team "Ding Ding")
 
 AI-powered recommendation of applicable **Indian Standards** for procurement specifications
 (Ministry of Consumer Affairs / Bureau of Indian Standards).

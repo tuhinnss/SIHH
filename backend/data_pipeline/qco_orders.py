@@ -28,7 +28,7 @@ ORDERS = RAW / "bis_orders"
 OUT = RAW / "certification_draft.csv"
 PAGE_URL = "https://www.bis.gov.in/product-certification/products-under-compulsory-certification/scheme-i-mark-scheme/"
 MAX_BYTES = 5_000_000
-UA = {"User-Agent": "SpecSure-SIH26108-prototype"}
+UA = {"User-Agent": "Kalamkaar-SIH26108-prototype"}
 
 _SERIAL = re.compile(r"^\d*\.$")  # the printed page truncates serial numbers ("0.", "1.", ".")
 _IS_HEAD = re.compile(r"^IS\b")
