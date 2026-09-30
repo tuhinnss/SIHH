@@ -155,7 +155,10 @@ extracted standards (plus title-based supersession catalogue-wide).
   failing): 1,300 stored edges (909 normative_ref, 195 test_method, 47 terminology, 65 scope_ref,
   84 supersedes) and 248 scope snippets. 81% of extracted references resolve to a catalogue entry;
   the rest are standards missing from the older snapshot.
-* `certification.csv` is empty until you fill it, so no certification badge/flag appears yet.
+* `certification.csv` has 28 hand-confirmed rows: the Cement (Quality Control) Order 2003 (13 cement
+  types, from 17 Feb 2003) and the Electrical Wires, Cables, Appliances … (Quality Control) Order 2003
+  (15 items still on today's BIS list, from 17 Feb or 17 Aug 2003). Steel and other orders are in the
+  draft (`data/raw/certification_draft.csv`) awaiting confirmation.
 
 ## Accuracy (first measurement, 2026-09-30)
 42 scoreable line items from 16 real public tender specifications (BHEL, NTPC, NIT, university and

@@ -40,7 +40,7 @@ All five planned phases are built and were verified in a real browser and agains
 | Frontend | React+Vite+Tailwind: Search, Tender Check, Standard (react-force-graph-2d), About |
 | Tests | 91 pytest tests (parsers, citations incl. strip_citations and Roman-numeral parts, GeM bid layouts, QCO order parsing, eval row harvesting, index texts, batched dense ranking, validator, reason grounding, recommender with stub LLM incl. cache and tender batching, linter, tender/PDF incl. paging and scans, certification check, metrics); CI runs them plus the frontend build (`.github/workflows/ci.yml`) |
 | Eval | `eval/tender_rows.jsonl`: 48 reviewed rows from 16 real public tenders (42 scoreable). Full pipeline (batched, no reranker) Hit@5 0.833, Recall@5 0.695, MRR 0.782; hybrid retrieval alone Hit@5 0.452; invented IS 0. Drop reasons in `tender_rows_dropped.jsonl`, URLs in `tender_sources.csv` (PDFs in git-ignored `tenders/`). `eval_set.jsonl` (5 demo queries) still has no gold |
-| Certification | `data/certification.csv` is an empty template on purpose |
+| Certification | `data/certification.csv`: 28 rows (session 2), transcribed at the user's direction from two scanned 2003 orders the user read and OCR confirmed — Cement QCO S.O. 191(E) (13 cement types, 2003-02-17) and Electrical QCO S.O. 189(E) (15 of its 24 schedule items still on the BIS list; items 1–7 2003-02-17, 8–24 2003-08-17). Badge and `no_certification` flag verified end to end. The selection rules are in commit `0cf3863`'s message |
 
 ## 2. Prioritised to-do (highest value first)
 1. **Grow and use the evaluation.** First pass done (48 rows, see §1). Next: more rows (lighting has only 7; aim
@@ -56,7 +56,11 @@ All five planned phases are built and were verified in a real browser and agains
    531 order PDFs: 187/604 products get a suggested start date with evidence (steel well covered); the 2003 Cement
    (S.O. 191(E)) and Electrical Wires/Cables (S.O. 189(E)) orders and 41 others are scanned images, so those rows
    need the user to read the order. The "come into force on the date of its publication" sentence is the order's
-   own start, not the product's; the per-product term is in the schedule table.
+   own start, not the product's; the per-product term is in the schedule table. Done so far: cement + electrical
+   (28 rows). Next: steel (good evidence in the draft; the user confirms), and note that IS 8112 / IS 12269
+   (43/53-grade OPC) are separate in our older catalogue but not on today's BIS list (merged into IS 269), so a
+   "43 grade OPC" line recommending IS 8112 gets no certification flag; IS 8828 (MCBs) is compulsory but missing
+   from our catalogue.
 3. **Grow relation coverage** beyond the 300-standard subset: edit `VERTICALS`/`PER_VERTICAL` in
    `data_pipeline/select_subset.py` (or add verticals), rerun `extract_refs` (resumable; ~3–20 s/standard at 1 req/s),
    then `build_edges` and `build_index`. Ask the user which procurement categories matter for the demo first
@@ -68,7 +72,10 @@ All five planned phases are built and were verified in a real browser and agains
 5. ~~LLM reason grounding~~ — done: `validator.ground_reason` drops a reason whose numbers or certification terms
    are not in the candidate line (`IS number (year): title`, all the LLM sees) or the requirement. Wording-level
    over-claims without numbers can still slip through.
-6. **Tender robustness:** scanned pages are now detected and reported, but not read — OCR still needs a decision
+6. **Tender robustness:** (RapidOCR — `pip install rapidocr_onnxruntime`, offline, no system install — read the
+   scanned 2003 gazette orders accurately at 200 dpi in session 2; it is installed in the local venv only, not in
+   requirements.txt, and is the obvious candidate for OCR of scanned tenders.)
+   Scanned pages are now detected and reported, but not read — OCR still needs a decision
    (Tesseract via PyMuPDF `get_textpage_ocr` needs a system install; RapidOCR is pip-only). Test on real tender PDFs;
    consider IndicTrans2 for Hindi (currently the LLM translates).
 7. Nice-to-have: Docker/compose, frontend tests. (CI and Tender Check paging are done.)
