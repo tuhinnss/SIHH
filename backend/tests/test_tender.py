@@ -112,6 +112,18 @@ def test_end_to_end_pdf_analysis():
     assert types(out["items"][1]["flags"]) == ["superseded"]
     assert out["summary"] == {"red": 1, "amber": 2}
     assert out["items"][0]["recommendations"][0]["is_number"] == "IS 100"
+    assert out["scanned_pages"] == 0 and out["warning"] is None
+
+
+def test_scanned_pages_are_reported_not_silently_empty():
+    text_page = pymupdf.open(stream=make_pdf(["1. Supply of widgets as per IS 100", "2. Supply of gadgets"]))
+    scan = pymupdf.open()
+    page = scan.new_page()
+    page.insert_image(page.rect, pixmap=text_page[0].get_pixmap(dpi=100))  # image only, no text layer
+    rec = Recommender(Retr(), LLMClient([]), {})
+    out = analyze_pdf(scan.tobytes(), "scan.pdf", rec, Linter(cat(), cert()))
+    assert out["items"] == [] and out["scanned_pages"] == 1
+    assert "1 of 1 page(s) are scanned" in out["warning"]
 
 
 def test_max_items_truncation():

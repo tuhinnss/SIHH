@@ -13,7 +13,7 @@ function auditHtml(r) {
   .note{background:#fff8d6;border:1px solid #ffc601;padding:8px;margin:12px 0}</style></head><body>
   <h1>SpecSure — Tender audit report</h1>
   <p><b>File:</b> ${esc(r.filename)} · ${r.pages} page(s) · ${r.items.length} item(s) analysed${r.truncated ? ` of ${r.total_items_found}` : ""} · <b>${r.summary.red}</b> red / <b>${r.summary.amber}</b> amber flags · generated ${new Date().toLocaleString()}</p>
-  <div class="note">${esc(r.disclaimer)}</div>
+  <div class="note">${esc(r.disclaimer)}</div>${r.warning ? `<div class="note red">${esc(r.warning)}</div>` : ""}
   <table><tr><th>#</th><th>Line item</th><th>Suggested standards (per our catalogue)</th><th>Linter findings</th></tr>${rows}</table>
   </body></html>`;
 }
@@ -73,6 +73,7 @@ export default function TenderCheck() {
             <span className={`text-xs border rounded px-2 py-0.5 ${chip.amber}`}>{res.summary.amber} amber</span>
             <button onClick={exportReport} className="ml-auto bg-navy text-white text-sm px-4 py-1.5 rounded hover:bg-blue-900">Export audit report</button>
           </div>
+          {res.warning && <p className="text-sm bg-red-50 border border-red-300 text-red-900 rounded px-3 py-2 mb-3">{res.warning}</p>}
           {res.truncated && (
             <div className="flex flex-wrap items-center gap-3 text-sm bg-amber-50 border border-amber-300 rounded px-3 py-2 mb-3">
               <span>Showing the first {res.items.length} of {res.total_items_found} items found.</span>

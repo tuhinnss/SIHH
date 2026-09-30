@@ -12,10 +12,17 @@ _NOISE = re.compile(r"^\s*(page\s*\d+(\s*of\s*\d+)?|\d+\s*/\s*\d+)\s*$", re.I)
 _QTYUNIT = re.compile(r"^\s*(?:\d+(?:[.,]\d+)?\s*)?(nos?\.?|pcs?|set|sets|mtr|m|kg|ltr|lot|unit|units|each|sqm|rmt)\s*$", re.I)
 
 
-def extract_text(pdf_bytes: bytes) -> tuple[str, int]:
+def extract_text(pdf_bytes: bytes) -> tuple[str, int, int]:
+    """-> (text, pages, image_only_pages). Image-only pages (scans) have no text layer and OCR is
+    not included, so their line items are invisible to the splitter."""
     doc = pymupdf.open(stream=pdf_bytes, filetype="pdf")
-    pages = [p.get_text("text") for p in doc]
-    return "\n".join(pages)[:MAX_CHARS], len(pages)
+    pages, image_only = [], 0
+    for p in doc:
+        t = p.get_text("text")
+        if not t.strip() and p.get_images():
+            image_only += 1
+        pages.append(t)
+    return "\n".join(pages)[:MAX_CHARS], len(pages), image_only
 
 
 def split_items(text: str) -> list[str]:
