@@ -8,13 +8,22 @@ import re
 from dataclasses import dataclass
 
 _JOINT = r"(?:ISO|IEC|IEEE|TR|TS|PAS)"
+# Real tenders also write parts as "(Part-I)", "(Pt II)" or a bare "part III" after the year.
+_PART = r"(?i:Part|Pt)\.?\s*[-:]?\s*"
+_PNUM = r"[A-Za-z]?\d+[A-Za-z]?|(?i:[IVX]{1,4})\b"
 _CITE = re.compile(
     rf"""(?<![A-Za-z])IS(?P<joint>(?:\s*/\s*{_JOINT})*)\s*[:\-]?\s*(?P<num>\d{{1,6}})
-        (?:\s*\(\s*(?:Part|Pt)\.?\s*(?P<p1>[A-Za-z]?\d+[A-Za-z]?)\s*(?:[/,\-]\s*(?:Sec(?:tion)?\.?\s*)?(?P<s1>\d+))?\s*\))?
+        (?:\s*\(\s*{_PART}(?P<p1>{_PNUM})\s*(?:[/,\-]\s*(?:Sec(?:tion)?\.?\s*)?(?P<s1>\d+))?\s*\))?
         (?:\s*\(\s*(?:Sec(?:tion)?\.?)\s*(?P<s2>\d+)\s*\))?
         (?P<hy>(?:\s*-\s*[A-Za-z]?\d{{1,3}}[A-Za-z]?(?!\d))*)
-        (?:\s*[:\-/]\s*(?P<year>(?:19|20)\d{{2}})(?!\d))?""",
+        (?:\s*[:\-/]\s*(?P<year>(?:19|20)\d{{2}})(?!\d))?
+        (?:\s*[,:/\-]?\s*{_PART}(?P<p3>\d+\b|(?i:[IVX]{{1,4}})\b)(?:\s*[:\-/]?\s*(?P<year2>(?:19|20)\d{{2}})(?!\d))?)?""",
     re.X)
+_ROMAN = {"I": "1", "II": "2", "III": "3", "IV": "4", "V": "5", "VI": "6", "VII": "7", "VIII": "8", "IX": "9", "X": "10"}
+
+
+def _arabic(part: str | None) -> str | None:
+    return _ROMAN.get(part.upper(), part) if part else part
 
 
 @dataclass(frozen=True)
@@ -49,13 +58,14 @@ def extract_citations(text: str) -> list[Citation]:
     out, seen = [], set()
     for m in _CITE.finditer(text):
         joint = tuple(re.findall(_JOINT, m["joint"] or ""))
-        part, section = m["p1"], m["s1"] or m["s2"]
+        part, section = m["p1"] or m["p3"], m["s1"] or m["s2"]
         hy = re.findall(r"[A-Za-z]?\d{1,3}[A-Za-z]?", m["hy"] or "")
         if hy and part is None:
             part = hy[0]
             if len(hy) > 1 and section is None:
                 section = hy[1]
-        year = int(m["year"]) if m["year"] else None
+        part = _arabic(part)
+        year = int(m["year"] or m["year2"]) if (m["year"] or m["year2"]) else None
         key = "-".join(["IS", *joint, m["num"]])
         if part:
             key += f"-P{part}"

@@ -18,6 +18,13 @@ from app.citations import extract_citations, strip_citations  # noqa: E402
     ("IS 16107 (Part 2) (Sec 2) : 2017", "IS-16107-P2-S2", 2017),
     ("IS/ISO/IEC 17799 : 2005", "IS-ISO-IEC-17799", 2005),
     ("conforming to IS 1786.", "IS-1786", None),
+    # styles seen in real tender PDFs
+    ("IS:1554 (Part-I)", "IS-1554-P1", None),
+    ("IS: 1554 (Part-1) : 1988", "IS-1554-P1", 1988),
+    ("IS 3961 (Pt II)", "IS-3961-P2", None),
+    ("IS:694 part I 1990", "IS-694-P1", 1990),
+    ("IS 9537 / 1983 part III", "IS-9537-P3", 1983),
+    ("IS 1786 partially galvanised", "IS-1786", None),
 ])
 def test_normalise(text, key, year):
     (c,) = extract_citations(text)
