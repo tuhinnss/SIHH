@@ -78,8 +78,11 @@ def main() -> None:
     lines = ["| Setup | Recall@5 | Recall@10 | MRR | nDCG@10 |", "|---|---|---|---|---|"]
     for name, fn in setups.items():
         r5 = r10 = m = n = 0.0
+        misses = []  # rows with no gold standard in top k; the last (full) setup's are printed
         for row in rows:
             ranked = fn(row["query"])
+            if not set(ranked[:a.k]) & row["gold"]:
+                misses.append((row, ranked[:3]))
             r5 += recall_at_k(ranked, row["gold"], 5)
             r10 += recall_at_k(ranked, row["gold"], 10)
             m += mrr(ranked, row["gold"])
@@ -87,6 +90,9 @@ def main() -> None:
         c = len(rows)
         lines.append(f"| {name} | {r5 / c:.3f} | {r10 / c:.3f} | {m / c:.3f} | {n / c:.3f} |")
     print("\n".join(lines))
+    print(f"\nMisses of the last setup ({len(misses)}/{len(rows)}): query | gold | got top 3")
+    for row, got in misses:
+        print(f"- {row['query'][:70]} | {sorted(row['gold'])} | {got}")
     print(f"\nInvented IS numbers in final output: {invented} (must be 0). "
           f"LLM proposals rejected by the validator: {llm_rejected}.")
     sys.exit(1 if invented else 0)
