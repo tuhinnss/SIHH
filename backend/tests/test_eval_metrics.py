@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from eval.metrics import mrr, ndcg_at_k, recall_at_k  # noqa: E402
+from eval.metrics import hit_at_k, mrr, ndcg_at_k, recall_at_k  # noqa: E402
 
 
 def test_recall_mrr_ndcg():
@@ -17,3 +17,4 @@ def test_recall_mrr_ndcg():
     ideal = 1 + 1 / math.log2(3) + 1 / math.log2(4)
     assert abs(ndcg_at_k(ranked, gold, 10) - dcg / ideal) < 1e-9
     assert ndcg_at_k(["a"], set(), 10) == 0.0
+    assert hit_at_k(ranked, gold, 1) == 0.0 and hit_at_k(ranked, gold, 2) == 1.0
