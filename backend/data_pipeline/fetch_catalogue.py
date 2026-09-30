@@ -15,8 +15,8 @@ def main() -> None:
     if not src.exists():
         from data_pipeline.fetch_raw import main as fetch
         fetch()
-    rows = [r for r in (parse_item(json.loads(l)) for l in open(src)) if r]
-    with open(ROOT / "data" / "catalogue.jsonl", "w") as f:
+    rows = [r for r in (parse_item(json.loads(l)) for l in open(src, encoding="utf-8")) if r]
+    with open(ROOT / "data" / "catalogue.jsonl", "w", encoding="utf-8", newline="\n") as f:
         for r in rows:
             f.write(json.dumps(to_dict(r), ensure_ascii=False) + "\n")
     DB.unlink(missing_ok=True)

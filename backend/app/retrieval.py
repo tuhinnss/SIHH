@@ -20,7 +20,7 @@ def rrf(rankings: list[list[int]], k: int = RRF_K) -> dict[int, float]:
 
 class Retriever:
     def __init__(self) -> None:
-        self.docs: list[dict] = json.loads((INDEX_DIR / "docs.json").read_text())
+        self.docs: list[dict] = json.loads((INDEX_DIR / "docs.json").read_text(encoding="utf-8"))
         self.bm25 = bm25s.BM25.load(str(INDEX_DIR / "bm25"))
         self.emb = np.load(INDEX_DIR / "emb.npy")
         self._model = None

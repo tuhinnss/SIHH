@@ -18,7 +18,7 @@ def polite_get_json(url: str, params: dict | None = None, retries: int = 5) -> d
     key = hashlib.sha256((url + json.dumps(params, sort_keys=True)).encode()).hexdigest()
     path = CACHE / f"{key}.json"
     if path.exists():
-        return json.loads(path.read_text())
+        return json.loads(path.read_text(encoding="utf-8"))
     CACHE.mkdir(parents=True, exist_ok=True)
     delay = 2.0
     for attempt in range(retries):
@@ -33,7 +33,7 @@ def polite_get_json(url: str, params: dict | None = None, retries: int = 5) -> d
             data = r.json()
             if "error" in data:
                 raise ValueError(data["error"])
-            path.write_text(json.dumps(data))
+            path.write_text(json.dumps(data), encoding="utf-8")
             return data
         except (requests.RequestException, ValueError):
             if attempt == retries - 1:

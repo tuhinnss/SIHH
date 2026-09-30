@@ -52,7 +52,7 @@ class Graph:
         p = DATA / "refs_extracted.jsonl"
         if p.exists():
             ident_key = {v.get("identifier"): k for k, v in meta.items()}
-            for line in open(p):
+            for line in open(p, encoding="utf-8"):
                 r = json.loads(line)
                 k = ident_key.get(r["identifier"])
                 if k and r.get("ok"):

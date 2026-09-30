@@ -26,7 +26,7 @@ def main() -> None:
             break
         params = {**params, "cursor": cursor}
     RAW.mkdir(parents=True, exist_ok=True)
-    with open(RAW / "ia_docs.jsonl", "w") as f:
+    with open(RAW / "ia_docs.jsonl", "w", encoding="utf-8") as f:
         for d in docs.values():
             f.write(json.dumps(d, ensure_ascii=False) + "\n")
     print(f"unique items: {len(docs)}")

@@ -50,7 +50,7 @@ def main() -> None:
     docs = load_docs()
     texts = [doc_text(d) for d in docs]
     print(f"{len(docs)} retrieval documents")
-    (INDEX_DIR / "docs.json").write_text(json.dumps(docs, ensure_ascii=False))
+    (INDEX_DIR / "docs.json").write_text(json.dumps(docs, ensure_ascii=False), encoding="utf-8")
 
     tok = bm25s.tokenize(texts, stopwords="en")
     bm = bm25s.BM25()
@@ -61,7 +61,7 @@ def main() -> None:
     hashes = [hashlib.md5(t.encode()).hexdigest() for t in texts]
     old_vecs, old_by_hash = None, {}
     if emb_path.exists() and meta_path.exists():
-        meta = json.loads(meta_path.read_text())
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
         if meta.get("model") == EMBED_MODEL and meta.get("hashes"):
             old_vecs = np.load(emb_path)
             old_by_hash = {h: i for i, h in enumerate(meta["hashes"])}
@@ -84,7 +84,7 @@ def main() -> None:
         idx = todo[i:i + bs]
         out[idx] = model.encode([prefix + texts[j] for j in idx], normalize_embeddings=True, batch_size=bs)
     np.save(emb_path, out)
-    meta_path.write_text(json.dumps({"model": EMBED_MODEL, "n": len(texts), "hashes": hashes}))
+    meta_path.write_text(json.dumps({"model": EMBED_MODEL, "n": len(texts), "hashes": hashes}), encoding="utf-8")
 
 
 if __name__ == "__main__":

@@ -14,7 +14,7 @@ SCHEMES = {"ISI/QCO", "CRS", "Hallmarking"}
 
 def check(path=DATA / "certification.csv", graph: Graph | None = None) -> list[str]:
     problems = []
-    with open(path, newline="") as f:
+    with open(path, newline="", encoding="utf-8-sig") as f:
         rd = csv.DictReader(f)
         if rd.fieldnames != REQUIRED:
             return [f"header must be exactly: {','.join(REQUIRED)}"]

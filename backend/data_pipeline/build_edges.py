@@ -69,7 +69,7 @@ def main() -> None:
     stats = {"records": 0, "ok": 0, "refs": 0, "refs_resolved": 0, "scope_only": 0, "foreword_supersedes": 0}
     snippets: dict[str, str] = {}
     path = ROOT / "data" / "refs_extracted.jsonl"
-    for line in (open(path) if path.exists() else []):
+    for line in (open(path, encoding="utf-8") if path.exists() else []):
         rec = json.loads(line)
         stats["records"] += 1
         src = id_key.get(rec["identifier"])

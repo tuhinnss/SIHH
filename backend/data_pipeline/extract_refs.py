@@ -48,13 +48,13 @@ def process(identifier: str) -> dict:
 
 
 def main() -> None:
-    ids = [x["identifier"] for x in json.loads(SUBSET.read_text())]
+    ids = [x["identifier"] for x in json.loads(SUBSET.read_text(encoding="utf-8"))]
     done = set()
     if OUT.exists():
-        done = {json.loads(l)["identifier"] for l in open(OUT)}
+        done = {json.loads(l)["identifier"] for l in open(OUT, encoding="utf-8")}
     todo = [i for i in ids if i not in done]
     print(f"{len(done)} done, {len(todo)} to go")
-    with open(OUT, "a") as f:
+    with open(OUT, "a", encoding="utf-8", newline="\n") as f:
         for ident in tqdm(todo, desc="standards"):
             try:
                 rec = process(ident)
