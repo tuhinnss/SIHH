@@ -16,7 +16,7 @@ flags risky citations and wording.
 | Rule | How it is enforced |
 |---|---|
 | No IS number/title/year/certification rule from memory | Everything comes from downloaded data (`data/catalogue.jsonl`, extracted edges, `certification.csv`); unknown shows "unknown" |
-| LLM may only choose retrieved candidates | JSON schema whose `is_number` is an **enum of the candidates**; then `validator.py` re-checks candidate + catalogue membership, drops and logs the rest (`data/invented_is_log.jsonl`) |
+| LLM may only choose retrieved candidates | JSON schema whose `is_number` is an **enum of the candidates**; then `validator.py` re-checks candidate + catalogue membership, drops and logs the rest (`data/invented_is_log.jsonl`). A reason is kept only if the numbers and certification terms it states appear in the candidate line or the requirement |
 | No BIS texts in git | Only metadata, ≤800-char scope snippets and reference links are stored; raw downloads live in `data/raw/` (git-ignored); OCR text is processed in memory and discarded |
 | Polite scraping | 1 request/second, on-disk cache, exponential backoff (`data_pipeline/common.py`) |
 | Free stack, keys not in git | Gemini free tier → Groq fallback; keys read from `.env` (`.env.example` committed) |
@@ -58,16 +58,29 @@ Without LLM keys (or when both providers fail) `/recommend` degrades to retrieva
 ```bash
 cp .env.example .env            # add GEMINI_API_KEY / GROQ_API_KEY (optional; app works without)
 cd backend
-pip install -r requirements.txt  # CPU torch: pip install torch --index-url https://download.pytorch.org/whl/cpu
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install torch --index-url https://download.pytorch.org/whl/cpu   # CPU torch first
+pip install -r requirements.txt
 ```
-Build the data (order matters; each step is cached/resumable):
+On Windows use the python.org Python (`py -3.12 -m venv .venv`); MSYS2/mingw Python cannot install the
+torch/faiss wheels.
+
+Build the data (order matters; each step is cached/resumable). A fresh clone needs only these three,
+because `catalogue.jsonl`, `subset_ids.json` and `refs_extracted.jsonl` are committed:
 ```bash
-python -m data_pipeline.fetch_catalogue   # ~2 min: archive.org Scraping API -> catalogue.jsonl + SQLite
-python -m data_pipeline.select_subset     # ~300 standards in 3 verticals (steel/cement, cables/electrical, pipes/plumbing)
-python -m data_pipeline.extract_refs      # ~20-60 min, 1 req/s: scope + referred IS + supersession (resumable)
+python -m data_pipeline.fetch_catalogue   # ~2 s: committed catalogue.jsonl snapshot -> SQLite
+                                          # (--refresh re-downloads from the archive.org Scraping API, ~2 min)
 python -m data_pipeline.build_edges       # edges table + scope snippets (re-run after fetch_catalogue)
-python -m data_pipeline.build_index       # BM25 + bge-m3; first run ~15 min on 4 CPUs, later runs re-embed only changed docs
+python -m data_pipeline.build_index       # BM25 + bge-m3 (~2.3 GB download); first run ~15-60 min on CPU,
+                                          # later runs re-embed only changed docs
                                           # (EMBED_MODEL=intfloat/multilingual-e5-small is faster)
+```
+To change or grow the relation subset (after `build_index`, which `select_subset` reads):
+```bash
+python -m data_pipeline.select_subset     # ~300 standards in 3 verticals (steel/cement, cables/electrical, pipes/plumbing)
+python -m data_pipeline.extract_refs      # ~20-60 min, 1 req/s: scope + referred IS + supersession (resumable;
+                                          # --retry-failed re-attempts failed downloads)
+# then build_edges and build_index again
 ```
 Run:
 ```bash
@@ -78,17 +91,20 @@ Tests / eval (from `backend/`):
 ```bash
 python -m pytest tests                            # LLM is stubbed
 python -m data_pipeline.check_certification       # validate your hand-filled certification.csv
-python -m eval.run_eval                           # needs gold_is filled in eval/eval_set.jsonl
+python -m eval.from_tenders tenders/*.pdf         # real tender PDFs -> eval/tender_rows.jsonl (review the rows)
+python -m eval.run_eval --file eval/tender_rows.jsonl   # metrics + the rows the full pipeline missed
+python -m eval.run_eval                           # default file eval/eval_set.jsonl (gold_is still empty)
 ```
 Model ids are overridable (`GEMINI_MODEL`, `GROQ_MODEL`, `EMBED_MODEL`, `RERANK_MODEL`); check the
-providers' current free-tier names. A Docker setup is not included.
+providers' current free-tier names. A Docker setup is not included. GitHub Actions
+(`.github/workflows/ci.yml`) runs the tests and the frontend build on every push and pull request.
 
 ## API
 | Endpoint | Purpose |
 |---|---|
 | `GET /health` | liveness |
 | `POST /recommend {text, lang?, top_k=10}` | ranked cards: `is_number,title,year,relevance,reason,confidence,supersedes_info,allied[],certification,source_url,clause` (+ headers `X-LLM-Used`, `X-Detected-Lang`) |
-| `POST /analyze-tender` (multipart PDF) | line items + recommendations + linter flags |
+| `POST /analyze-tender?offset=0` (multipart PDF) | line items + recommendations + linter flags, 40 items per call; `next_offset` (or `null`) requests the next page |
 | `GET /standard/{is_number}` | details, editions, scope extract, allied list, graph nodes/links |
 | `GET /stats` | catalogue size, edges by type, last sync |
 
@@ -113,8 +129,11 @@ extracted standards (plus title-based supersession catalogue-wide).
   Compulsory Certification": `product,is_number,scheme (ISI/QCO|CRS|Hallmarking),order_reference,
   effective_date,withdrawn_date,source_url,last_verified`. Run `check_certification` afterwards. The app
   shows certification only for rows that are active today.
-* **Evaluation:** replace the empty `gold_is` in `backend/eval/eval_set.jsonl` with IS numbers cited by
-  real GeM/CPPP tenders.
+* **Evaluation:** download real tender PDFs (CPPP / GeM bid documents with technical specifications) into a
+  folder and run `python -m eval.from_tenders <folder>/*.pdf`. Each line item that cites an IS becomes a row
+  whose query is the item text with the citations removed and whose `gold_is` is what the tender cited. Review
+  the rows (delete ones where the citation is not about the item), then `python -m eval.run_eval --file
+  eval/tender_rows.jsonl`. Alternatively fill the empty `gold_is` in `backend/eval/eval_set.jsonl` by hand.
 
 ## Demo script (5 minutes)
 1. **About** tab: catalogue size, edges, honest disclaimers (older snapshot).
@@ -145,6 +164,8 @@ extracted standards (plus title-based supersession catalogue-wide).
   rate-limited provider down for 60 s and fails over to Groq; if both fail, results are retrieval-only.
   Defaults are `gemini-flash-lite-latest` and Groq `openai/gpt-oss-120b` (the smaller gpt-oss-20b chose
   worse standards in our TMT test). Model names change often; override with `GEMINI_MODEL` / `GROQ_MODEL`.
-* LLM reasons are one-line summaries by a small model; they are constrained to catalogue candidates
-  but the *explanation text* can still over-claim. The IS number, title and year always come from the catalogue.
+* LLM reasons are one-line summaries by a small model. Reasons that state a number (grade, size, year,
+  another IS) or a certification term not present in the candidate's catalogue line or the requirement are
+  dropped, but wording without such facts can still be imprecise. The IS number, title and year always
+  come from the catalogue.
 * No accuracy numbers are published yet: `eval/eval_set.jsonl` needs real gold rows from tenders.
