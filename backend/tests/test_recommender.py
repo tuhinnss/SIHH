@@ -6,7 +6,7 @@ from app import config  # noqa: E402
 from app.clause import tender_clause  # noqa: E402
 from app.llm import LLMClient, LLMUnavailable, StubProvider  # noqa: E402
 from app.recommender import Recommender, select_schema  # noqa: E402
-from app.validator import validate_selection  # noqa: E402
+from app.validator import ground_reason, validate_selection  # noqa: E402
 
 
 def row(num, title, year=2000):
@@ -209,3 +209,36 @@ def test_cited_standards_join_candidates(tmp_path, monkeypatch):
     rec = Recommender(R(), LLMClient([]), catalogue, graph=Graph(cat, []))
     out = rec.recommend("bars conforming to IS 1786 : 1985", top_k=5)
     assert [r["is_number"] for r in out["results"]][0] == "IS 1786"
+
+
+LINE = "IS 1786 (2008): High strength deformed steel bars"
+
+
+def test_reason_grounded_in_candidate_or_requirement_is_kept():
+    assert ground_reason("Deformed steel bars for RCC work.", LINE, "TMT bars for RCC") == \
+        "Deformed steel bars for RCC work."
+    # numbers from the requirement or the candidate line (IS number, year) are fine
+    assert ground_reason("Covers Fe 500 bars as in IS 1786 : 2008.", LINE, "Fe 500 TMT bars")
+    assert ground_reason("ISI marked bars as asked.", LINE, "ISI marked TMT bars")
+
+
+def test_ungrounded_reason_is_dropped():
+    assert ground_reason("Covers Fe 550D grade bars.", LINE, "TMT bars for RCC") is None
+    assert ground_reason("Use with IS 456 for design.", LINE, "TMT bars for RCC") is None
+    assert ground_reason("Revised in 2019.", LINE, "TMT bars") is None
+    assert ground_reason("BIS certification is mandatory for these bars.", LINE, "TMT bars") is None
+    assert ground_reason("", LINE, "TMT bars") is None
+
+
+def test_ungrounded_reason_removed_from_card(tmp_path, monkeypatch):
+    monkeypatch.setattr("app.validator.INVENTED_LOG", tmp_path / "log.jsonl")
+
+    def respond(prompt, schema):
+        if "english_query" in schema["properties"]:
+            return {"english_query": "TMT steel bars", "search_terms": []}
+        return {"selected": [
+            {"is_number": "IS 1786", "relevance": "primary", "reason": "Grade Fe 600 bars.", "confidence": 0.9},
+            {"is_number": "IS 4985", "relevance": "allied", "reason": "PVC pipes.", "confidence": 0.2}]}
+    rec, _ = make(respond)
+    out = rec.recommend("TMT steel bars")
+    assert [(r["is_number"], r["reason"]) for r in out["results"]] == [("IS 1786", None), ("IS 4985", "PVC pipes.")]

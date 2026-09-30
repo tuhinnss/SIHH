@@ -1,11 +1,35 @@
-"""Post-LLM validation: every IS number must be a retrieval candidate AND a catalogue entry."""
+"""Post-LLM validation: every IS number must be a retrieval candidate AND a catalogue entry;
+reasons may only state facts visible in the candidate line or the requirement."""
 import json
 import logging
+import re
 import time
 
 from app.config import INVENTED_LOG
 
 log = logging.getLogger("specsure.validator")
+
+_NUM = re.compile(r"\d+(?:\.\d+)?")
+# certification facts come only from certification.csv, never from LLM prose
+_CERT = re.compile(r"\bISI\b|\bBIS\b|certif|\bQCO\b|quality control order|\bCRS\b|compulsor|"
+                   r"mandator|licen[cs]e|hallmark", re.I)
+
+
+def ground_reason(reason: str | None, candidate_line: str, requirement: str) -> str | None:
+    """Keep the one-line reason only if every number it states (grades, sizes, years, other IS
+    numbers) and every certification term it uses also appears in the candidate line the LLM saw
+    or in the requirement text. Otherwise drop it: the card is still shown, just without a reason."""
+    if not reason:
+        return None
+    source = f"{candidate_line} {requirement}"
+    nums = set(_NUM.findall(source))
+    low = source.lower()
+    extra = [n for n in _NUM.findall(reason) if n not in nums]
+    extra += [m.group(0) for m in _CERT.finditer(reason) if m.group(0).lower() not in low]
+    if extra:
+        log.info("dropped ungrounded reason %r (not in candidate/requirement: %s)", reason, extra)
+        return None
+    return reason
 
 
 def validate_selection(items: list[dict], candidates: set[str], catalogue: set[str],
