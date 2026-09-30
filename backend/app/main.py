@@ -3,7 +3,7 @@ import sqlite3
 from datetime import date
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, File, HTTPException, Response, UploadFile
+from fastapi import FastAPI, File, HTTPException, Query, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -62,14 +62,15 @@ def recommend(req: RecommendReq, response: Response):
 
 
 @app.post("/analyze-tender")
-async def analyze_tender(file: UploadFile = File(...)):
+async def analyze_tender(file: UploadFile = File(...), offset: int = Query(0, ge=0)):
     data = await file.read()
     if len(data) > 20 * 1024 * 1024:
         raise HTTPException(413, "PDF too large (max 20 MB)")
     if not data.startswith(b"%PDF"):
         raise HTTPException(400, "Please upload a PDF file")
     try:
-        return analyze_pdf(data, file.filename or "tender.pdf", state["recommender"], state["linter"])
+        return analyze_pdf(data, file.filename or "tender.pdf", state["recommender"], state["linter"],
+                           offset=offset)
     except Exception as e:  # noqa: BLE001 - corrupt/encrypted PDFs etc.
         raise HTTPException(422, f"Could not read this PDF ({type(e).__name__})")
 

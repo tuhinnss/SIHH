@@ -8,7 +8,9 @@ log = logging.getLogger("specsure.analyze")
 MAX_ITEMS = 40
 
 
-def analyze_pdf(pdf_bytes: bytes, filename: str, rec: Recommender, linter, max_items: int = MAX_ITEMS) -> dict:
+def analyze_pdf(pdf_bytes: bytes, filename: str, rec: Recommender, linter, max_items: int = MAX_ITEMS,
+                offset: int = 0) -> dict:
+    """Analyses items[offset:offset + max_items]; `next_offset` (or None) fetches the next page."""
     text, pages = tender.extract_text(pdf_bytes)
     method = "heuristic"
     items = tender.split_items(text)
@@ -22,9 +24,10 @@ def analyze_pdf(pdf_bytes: bytes, filename: str, rec: Recommender, linter, max_i
     if len(items) < 2:
         items = tender.paragraph_split(text) or items
         method = "paragraph"
-    truncated = len(items) > max_items
+    end = offset + max_items
+    truncated = len(items) > end
     out_items = []
-    for i, it in enumerate(items[:max_items], 1):
+    for i, it in enumerate(items[offset:end], offset + 1):
         recs = rec.recommend(it, top_k=5)
         cards = recs["results"]
         primary = next((c for c in cards if c["relevance"] == "primary"), None)
@@ -36,6 +39,7 @@ def analyze_pdf(pdf_bytes: bytes, filename: str, rec: Recommender, linter, max_i
         for f in it["flags"]:
             counts[f["severity"]] += 1
     return {"filename": filename, "pages": pages, "split_method": method, "truncated": truncated,
-            "total_items_found": len(items), "items": out_items, "summary": counts,
+            "total_items_found": len(items), "offset": offset, "next_offset": end if truncated else None,
+            "items": out_items, "summary": counts,
             "disclaimer": "Prototype. Checks are against an older archive catalogue; verify on BIS "
                           "Know Your Standards."}
