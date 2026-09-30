@@ -1,5 +1,6 @@
 import json
 import sqlite3
+import threading
 from datetime import date
 from contextlib import asynccontextmanager
 
@@ -24,6 +25,8 @@ state: dict = {}
 async def lifespan(app: FastAPI):
     retriever = Retriever()
     state["retriever"] = retriever
+    # load the embedding model in the background so the first search does not wait ~40 s for it
+    threading.Thread(target=retriever.warm_up, daemon=True).start()
     cert = CertificationTable.load()
     cat = CatalogueIndex.from_sqlite()
     graph = Graph.from_sqlite(cat)
@@ -49,7 +52,7 @@ class RecommendReq(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "search_model_ready": state["retriever"].ready}
 
 
 @app.post("/recommend")

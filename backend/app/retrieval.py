@@ -32,20 +32,34 @@ class Retriever:
         with self._lock:
             if self._model is None:
                 from sentence_transformers import SentenceTransformer
-                self._model = SentenceTransformer(EMBED_MODEL, device="cpu")
+                try:  # cached copy first: skips the Hugging Face online check (~10 s here)
+                    self._model = SentenceTransformer(EMBED_MODEL, device="cpu", local_files_only=True)
+                except Exception:  # noqa: BLE001 - not downloaded yet
+                    self._model = SentenceTransformer(EMBED_MODEL, device="cpu")
             return self._model
+
+    @property
+    def ready(self) -> bool:
+        return self._model is not None
 
     def _bm25_rank(self, query: str, n: int) -> list[int]:
         toks = bm25s.tokenize([query], stopwords="en", show_progress=False)
         res, scores = self.bm25.retrieve(toks, k=min(n, len(self.docs)), show_progress=False)
         return [int(i) for i, s in zip(res[0], scores[0]) if s > 0]
 
-    def _dense_rank(self, query: str, n: int) -> list[int]:
+    def _dense_ranks(self, queries: list[str], n: int) -> list[list[int]]:
+        """One batched encode for all queries (one call per query was ~5x slower on CPU)."""
         prefix = "query: " if "e5" in EMBED_MODEL else ""
-        q = self.model.encode([prefix + query], normalize_embeddings=True)[0]
-        sims = self.emb @ q
-        top = np.argpartition(-sims, n)[:n]
-        return [int(i) for i in top[np.argsort(-sims[top])]]
+        qv = self.model.encode([prefix + q for q in queries], normalize_embeddings=True)
+        out = []
+        for sims in qv @ self.emb.T:
+            top = np.argpartition(-sims, n)[:n]
+            out.append([int(i) for i in top[np.argsort(-sims[top])]])
+        return out
+
+    def warm_up(self) -> None:
+        """Load the embedding model now instead of on the first query (~40 s on CPU)."""
+        self._dense_ranks(["warm up"], 1)
 
     def search(self, query: str, top_k: int = 10, mode: str = "hybrid",
                rerank: bool = False, extra_queries: list[str] | None = None,
@@ -57,7 +71,7 @@ class Retriever:
         if mode in ("bm25", "hybrid"):
             rankings += [self._bm25_rank(q, pool * 2) for q in queries]
         if mode in ("dense", "hybrid"):
-            rankings += [self._dense_rank(q, pool * 2) for q in queries]
+            rankings += self._dense_ranks(queries, pool * 2)
         fused = sorted(rrf(rankings).items(), key=lambda kv: -kv[1])[:pool]
         hits = [dict(self.docs[i], score=s, _idx=i) for i, s in fused]
         if rerank and hits:
