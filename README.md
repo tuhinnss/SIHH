@@ -125,6 +125,11 @@ the same IS number) is derived from the catalogue at query time. Edges are store
 extracted standards (plus title-based supersession catalogue-wide).
 
 ## Filling in your own data
+* **Certification draft (helper):** save bis.gov.in "Products under Compulsory Certification → Scheme I
+  (ISI Mark)" as PDF, then `python -m data_pipeline.qco_orders "<saved>.pdf"` (~20 min first time, 1
+  request/s). It writes `data/raw/certification_draft.csv`: each product with a suggested start date and the
+  exact order text it came from. Confirm the rows you need and copy them into `certification.csv` yourself;
+  orders that are scanned images (e.g. the 2003 Cement and Electrical Wires orders) have no evidence.
 * **Certification:** `data/certification.csv` (header only). Copy from bis.gov.in "Products under
   Compulsory Certification": `product,is_number,scheme (ISI/QCO|CRS|Hallmarking),order_reference,
   effective_date,withdrawn_date,source_url,last_verified`. Run `check_certification` afterwards. The app
@@ -152,14 +157,32 @@ extracted standards (plus title-based supersession catalogue-wide).
   the rest are standards missing from the older snapshot.
 * `certification.csv` is empty until you fill it, so no certification badge/flag appears yet.
 
+## Accuracy (first measurement, 2026-09-30)
+42 scoreable line items from 16 real public tender specifications (BHEL, NTPC, NIT, university and
+state-utility tenders; `backend/eval/tender_rows.jsonl`, sources in `tender_sources.csv`). The query is
+the item text with its IS citations removed; the "correct answer" is what the tender itself cited.
+
+| Setup | Hit@5 | Recall@5 | MRR |
+|---|---|---|---|
+| Hybrid retrieval (BM25 + dense), no LLM | 0.45 | 0.33 | 0.24 |
+| **Full pipeline (LLM expansion + selection, batched as in Tender Check)** | **0.83** | **0.70** | **0.78** |
+
+Invented IS numbers: 0. Caveats: small set (about ±11 points at 95%), rows were filtered by hand from
+145 harvested (reasons in `tender_rows_dropped.jsonl`), several rows share a source document, and 6 rows
+could not be scored because the cited standard is missing from the older catalogue. Misses are mostly
+the right standard with the wrong part (e.g. Part 1 vs Part 3) or a defensible alternative standard.
+Reproduce: `python -m eval.run_eval --file eval/tender_rows.jsonl` (about 13 LLM calls).
+
 ## Known limitations
 * Catalogue is an older archive snapshot (only ~3,200 of 22,025 records are from 2015 or later);
   standards published later are missing and will show "not in catalogue".
 * Relations exist for a ~300-standard subset; OCR errors can drop or garble references.
 * Retrieval is title-based: abbreviations absent from titles (e.g. "TMT") rely on the LLM's query
   expansion; without keys those queries can miss.
-* PDF parsing is heuristic; scanned (image-only) tenders need OCR (not included). All-caps text such
-  as "PRICE IS 100" can look like a citation and is flagged "not in catalogue".
+* PDF parsing is heuristic; scanned (image-only) tenders need OCR (not included) and are reported as
+  such. GeM bid documents are read by their item sections (BOQ and category layouts); for BOQ bids the
+  buyer's specifications are separate "View File" attachments that must be uploaded on their own.
+  All-caps text such as "PRICE IS 100" can look like a citation and is flagged "not in catalogue".
 * Free-tier LLM quotas are small: Gemini returns HTTP 429/503 under load, so the client cools a
   rate-limited provider down for 60 s and fails over to Groq; if both fail, results are retrieval-only.
   Defaults are `gemini-flash-lite-latest` and Groq `openai/gpt-oss-120b` (the smaller gpt-oss-20b chose
@@ -168,4 +191,5 @@ extracted standards (plus title-based supersession catalogue-wide).
   another IS) or a certification term not present in the candidate's catalogue line or the requirement are
   dropped, but wording without such facts can still be imprecise. The IS number, title and year always
   come from the catalogue.
-* No accuracy numbers are published yet: `eval/eval_set.jsonl` needs real gold rows from tenders.
+* Multi-part standards are the main source of misses (the right IS number with the wrong part), and the
+  evaluation set is still small and light on lighting items (7 rows).
