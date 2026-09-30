@@ -144,3 +144,45 @@ def test_short_numbers_do_not_match_prefixed_standards():
     L = Linter(cat(), cert())
     flags, cited = L.lint_item("Cables to IS 691 : 1988")     # plain IS 691 is NOT IS/IEC 691
     assert not cited[0]["in_catalogue"] and types(flags) == ["not_in_catalogue"]
+
+
+# Shape of a GeM "Bid Document" (English markers only; Hindi labels extract garbled)
+GEM_LINES = [
+    "Bid Number: GEM/2026/B/1234567",
+    "Ministry/State Name Some State",
+    "Searched String: 40MM HDPE PIPE",
+    "Old gadgets conforming to IS 200, Towels Conforming To IS 100 (V4)",
+    "Relevant Categories selected for notification",
+    "1. The minimum average annual financial turnover of the bidder shall be as indicated.",
+    "40MM DIA HDPE PIPE",
+    "xyz /Technical Specifications",
+    "Specification Document",  # real PDFs: link-table cells on separate lines
+    "View File",
+    "BOQ Detail Document View File",
+    "Advisory-Please refer attached BOQ document for detailed consignee list and delivery period.",
+    "xyz/Consignees/Reporting Officer and Quantity",
+    "1 Some Officer",
+    "5 15",
+    "6 / 13",
+    "Gadget Cable 4 Core",
+    "xyz /Technical Specifications",
+    "Conductor Copper, conforming to IS 300",
+    "xyz/Consignees/Reporting Officer and Quantity",
+    "1 Some Officer",
+    "800 15",
+]
+
+
+def test_gem_items_are_headings_plus_their_specs():
+    assert tender.gem_items("\n".join(GEM_LINES)) == [
+        "40MM DIA HDPE PIPE", "Gadget Cable 4 Core Conductor Copper, conforming to IS 300"]
+    assert tender.gem_items("1. Supply of widgets as per IS 100") == []  # not a GeM bid
+
+
+def test_gem_bid_ignores_gem_suggestion_box_and_forms():
+    rec = Recommender(Retr(), LLMClient([]), {"IS 100": {"is_number": "IS 100", "title": "W", "year": 1, "source_url": "u"}})
+    out = analyze_pdf(make_pdf(GEM_LINES), "gem.pdf", rec, Linter(cat(), cert()))
+    assert out["split_method"] == "gem" and [it["text"][:18] for it in out["items"]] == ["40MM DIA HDPE PIPE", "Gadget Cable 4 Cor"]
+    # IS 200 (superseded) and IS 100 appear only in GeM's suggestion box -> no flags from them
+    assert [[c["raw"] for c in it["cited"]] for it in out["items"]] == [[], ["IS 300"]]
+    assert out["summary"] == {"red": 0, "amber": 0}

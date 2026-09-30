@@ -15,16 +15,17 @@ def analyze_pdf(pdf_bytes: bytes, filename: str, rec: Recommender, linter, max_i
     warning = (f"{scanned} of {pages} page(s) are scanned images without a text layer, so their line items "
                "could not be read (OCR is not supported yet). Check those pages by hand or upload a "
                "text-based PDF.") if scanned else None
-    method = "heuristic"
-    items = tender.split_items(text)
-    if len(items) < 2 and rec.llm and rec.llm.providers:
+    items, method = tender.gem_items(text), "gem"
+    if not items:
+        items, method = tender.split_items(text), "heuristic"
+    if len(items) < 2 and method != "gem" and rec.llm and rec.llm.providers:
         try:
             llm_items = tender.llm_split(text, rec.llm)
             if len(llm_items) > len(items):
                 items, method = llm_items, "llm"
         except (LLMUnavailable, KeyError, ValueError, TypeError):
             pass
-    if len(items) < 2:
+    if len(items) < 2 and method != "gem":
         items = tender.paragraph_split(text) or items
         method = "paragraph"
     end = offset + max_items

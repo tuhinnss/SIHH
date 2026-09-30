@@ -21,9 +21,11 @@ MIN_QUERY = 15  # shorter leftovers ("Cable", "Item") are not a usable query
 
 
 def rows_from_text(text: str, source: str) -> list[dict]:
-    items = tender.split_items(text)
-    if len(items) < 2:
-        items = tender.paragraph_split(text) or items
+    items = tender.gem_items(text)  # GeM: items only, never GeM's own category suggestions
+    if not items:
+        items = tender.split_items(text)
+        if len(items) < 2:
+            items = tender.paragraph_split(text) or items
     rows = []
     for i, item in enumerate(items, 1):
         cites = extract_citations(item)
