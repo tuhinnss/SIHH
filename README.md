@@ -71,7 +71,7 @@ because `catalogue.jsonl`, `subset_ids.json` and `refs_extracted.jsonl` are comm
 python -m data_pipeline.fetch_catalogue   # ~2 s: committed catalogue.jsonl snapshot -> SQLite
                                           # (--refresh re-downloads from the archive.org Scraping API, ~2 min)
 python -m data_pipeline.build_edges       # edges table + scope snippets (re-run after fetch_catalogue)
-python -m data_pipeline.build_index       # BM25 + bge-m3 (~2.3 GB download); first run ~15-60 min on CPU,
+python -m data_pipeline.build_index       # BM25 + bge-m3 (~2.3 GB download); first run ~15-75 min on CPU,
                                           # later runs re-embed only changed docs
                                           # (EMBED_MODEL=intfloat/multilingual-e5-small is faster)
 ```

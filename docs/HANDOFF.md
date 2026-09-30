@@ -8,7 +8,9 @@ Standards for procurement specs; lint tenders. Read `CLAUDE.md` for the hard rul
 **Session 2 changes:** Windows port (explicit UTF-8 everywhere), `fetch_catalogue` builds from the committed
 snapshot (`--refresh` to re-download), LLM reason grounding (to-do #5), Tender Check paging beyond 40 items and a
 warning for scanned pages, `extract_refs --retry-failed`, GitHub Actions CI, `eval.from_tenders` (eval rows from
-real tender PDFs) and a misses list in `run_eval`.
+real tender PDFs) and a misses list in `run_eval`. Two bugs found while verifying: the Vite proxy failed on Windows
+(every `/api` call 502), and IS 1786 had fallen out of the "TMT steel bars" candidate pool (BM25 length penalty on docs
+with scope snippets; BM25 is now title-only). All §5 sanity checks pass on the local machine.
 
 ## 1. Where things stand
 All five planned phases are built and were verified in a real browser and against live Gemini/Groq:
@@ -16,12 +18,12 @@ All five planned phases are built and were verified in a real browser and agains
 | Area | State |
 |---|---|
 | Catalogue | 22,025 records from Internet Archive `gov.in.is.*` → 19,700 searchable standards (latest edition per key). Older snapshot (only ~3,200 records from 2015+). |
-| Retrieval | BM25 (bm25s) + bge-m3 dense, RRF fusion, top-50 pool, optional bge-reranker (off by default; did not help on TMT test) |
+| Retrieval | BM25 (bm25s) over `IS number: title` + bge-m3 dense over title (+ scope snippet), RRF fusion, top-50 pool, optional bge-reranker (off by default; did not help on TMT test) |
 | LLM | Query expansion/translation → enum-constrained selection → validator → reason grounding → clause built from catalogue fields. Gemini → Groq failover, 60 s cooldown on HTTP 429. Falls back to retrieval-only (`X-LLM-Used: false`) |
 | Relations | 298/300 subset standards extracted (steel/cement, cables/electrical, pipes/plumbing) → 1,300 edges (909 normative_ref, 195 test_method, 47 terminology, 65 scope_ref, 84 supersedes); 248 scope snippets. 81% of extracted refs resolve to the catalogue. `same_series` is derived at query time. |
 | Tender Check | PyMuPDF → line items (numbered/BOQ/bullets; LLM split only if <2 items) → recommend per item (40 per request; `?offset=` + "Analyse items 41–80" button for more) → linter (superseded🔴, no_certification🔴, not_in_catalogue🟠, older_edition🟠, brand_name🟠) → printable audit report. Image-only (scanned) pages are counted and reported in `warning`; no OCR |
 | Frontend | React+Vite+Tailwind: Search, Tender Check, Standard (react-force-graph-2d), About |
-| Tests | 72 pytest tests (parsers, citations incl. strip_citations, eval row harvesting, validator, reason grounding, recommender with stub LLM, linter, tender/PDF incl. paging and scans, certification check, metrics); CI runs them plus the frontend build (`.github/workflows/ci.yml`) |
+| Tests | 73 pytest tests (parsers, citations incl. strip_citations, eval row harvesting, index texts, validator, reason grounding, recommender with stub LLM, linter, tender/PDF incl. paging and scans, certification check, metrics); CI runs them plus the frontend build (`.github/workflows/ci.yml`) |
 | Eval | `backend/eval` harness works (BM25/dense/hybrid/hybrid+rerank+LLM; invented-IS count must be 0) but `eval_set.jsonl` has **no gold rows** → no accuracy numbers exist yet |
 | Certification | `data/certification.csv` is an empty template on purpose |
 
@@ -66,6 +68,13 @@ All five planned phases are built and were verified in a real browser and agains
   with the new standard's title (`build_edges.plausible`). Title-derived "(Superseding IS x)" edges are trusted.
 * **The LLM sees the whole top-50 pool** (not just top_k), and standards cited in the requirement text are added to the
   candidates. Earlier versions passed only top_k and missed IS 1786.
+* **BM25 must not see scope snippets.** Appending ~800-char snippets to ~250 docs made them ~20x longer than the title-only
+  majority; BM25 length normalisation then buried exactly those key standards (IS 1786 fused rank 55 for "TMT steel bars"
+  with Gemini's expansion → outside the pool). `build_index.bm25_text` is number + title; `doc_text` (dense) adds the
+  snippet. With 1 query + 6 expansion terms RRF fuses 14 lists, so a doc strong in only 2 lists is easily diluted —
+  worth tuning (k, per-list weights) once real gold data exists.
+* **Frontend proxy targets `127.0.0.1:8000`, not `localhost`:** Node 17+ resolves localhost to `::1` first, uvicorn
+  listens on IPv4 only → `ECONNREFUSED ::1:8000` and 502 on every `/api` call (seen on Windows).
 * **LLM models:** defaults `gemini-flash-lite-latest` and Groq `openai/gpt-oss-120b`; both overridable
   (`GEMINI_MODEL`, `GROQ_MODEL`). `gemini-2.5-flash` and `llama-3.3-70b-versatile` no longer exist for these keys; the
   `-latest` alias on the full Flash model exhausts the free quota fast; `gpt-oss-20b` chose worse standards. Re-check the
@@ -77,8 +86,10 @@ All five planned phases are built and were verified in a real browser and agains
 * **Windows (session 2):** `open()`/`read_text()` default to cp1252 → always pass `encoding="utf-8"`. The MSYS2 `python`
   first on PATH cannot install torch; the venv uses python.org 3.12 (`backend/.venv`). git has `core.autocrlf=true`, so
   source files are CRLF in the working tree. The Hugging Face cache warns about symlinks (harmless). On this
-  machine the first `build_index` took ~10 min to download bge-m3 (2.3 GB, hf-xet) and ~50 min to embed 19,700 docs on
-12 CPU cores (later runs re-embed only changed docs).
+  machine the first `build_index` took ~10 min to download bge-m3 (2.3 GB, hf-xet) and 64 min to embed 19,700 docs on
+  12 CPU cores (later runs re-embed only changed docs: seconds). The console is cp1252 too: set
+  `PYTHONIOENCODING=utf-8` when a script prints Hindi. `run_eval`'s full setup uses `rerank=True`, which downloads
+  bge-reranker-v2-m3 (~2 GB) on first use; it has not been downloaded on this machine yet.
 * **Agent tooling:** the Bash tool collapses `\\n` inside inline heredoc scripts into a real newline — write Python
   helpers to a file when a string literal must contain `\n`.
 * **Keys** go in the git-ignored `.env` (`config.py` loads `ROOT/.env`); keep the tracked `.env.example` blank.
@@ -89,7 +100,9 @@ All five planned phases are built and were verified in a real browser and agains
 `tender.py`/`analyze.py` (PDF) · `data_pipeline/{parsing,refs_parsing,extract_refs,build_edges,build_index,select_subset}.py`.
 
 ## 5. Sanity checks after setting up a new machine
-1. `python -m pytest tests` → 72 passed.
+All four passed on the local Windows machine on 2026-09-30 (plus Hindi/Hinglish PVC queries → IS 4985 primary, a
+scanned PDF → warning, a 45-item tender → 40 + "Analyse items 41–45").
+1. `python -m pytest tests` → 73 passed.
 2. `curl -X POST localhost:8000/recommend -H 'content-type: application/json' -d '{"text":"TMT steel bars for RCC"}'` →
    with keys: IS 1786 primary and header `X-LLM-Used: true`; without keys: retrieval-only.
 3. Frontend Tender Check with `docs/sample_tender.pdf` → 1 red (IS 445 superseded by IS 444), 4 amber.
