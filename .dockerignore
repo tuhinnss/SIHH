@@ -1,0 +1,14 @@
+.git
+.github
+.env
+.env.*
+**/__pycache__
+**/.venv
+**/node_modules
+frontend/dist
+tenders
+docs
+data/raw
+data/catalogue.jsonl
+data/subset_ids.json
+data/invented_is_log.jsonl
