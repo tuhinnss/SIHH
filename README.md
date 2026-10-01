@@ -96,8 +96,23 @@ python -m eval.run_eval --file eval/tender_rows.jsonl   # metrics + the rows the
 python -m eval.run_eval                           # default file eval/eval_set.jsonl (gold_is still empty)
 ```
 Model ids are overridable (`GEMINI_MODEL`, `GROQ_MODEL`, `EMBED_MODEL`, `RERANK_MODEL`); check the
-providers' current free-tier names. A Docker setup is not included. GitHub Actions
+providers' current free-tier names. GitHub Actions
 (`.github/workflows/ci.yml`) runs the tests and the frontend build on every push and pull request.
+
+## Deploy (Docker / Hugging Face Space)
+One container serves the built frontend and the API under `/api` (`app.site`). The image does not build
+the data: build it first (above), the Dockerfile copies `data/kalamkaar.sqlite` and `data/indexes/` in.
+```bash
+docker build -t kalamkaar .                                  # from the repo root; bakes bge-m3 into the image
+docker run --rm -p 7860:7860 --env-file .env kalamkaar       # http://localhost:7860
+```
+Hugging Face Space (free CPU tier, Docker SDK), from the repo root:
+```bash
+hf auth login                                                # token with write access
+python deploy/push_space.py <user>/kalamkaar                 # --dry-run lists the files; --no-secrets = retrieval-only
+```
+The script uploads the tracked code plus the built data in one commit and copies `GEMINI_API_KEY` /
+`GROQ_API_KEY` from `.env` into Space secrets. Re-run it to redeploy.
 
 ## API
 | Endpoint | Purpose |
